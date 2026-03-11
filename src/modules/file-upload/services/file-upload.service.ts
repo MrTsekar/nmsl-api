@@ -1,31 +1,38 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as AWS from 'aws-sdk';
+import {
+  BlobServiceClient,
+  BlobSASPermissions,
+  generateBlobSASQueryParameters,
+  StorageSharedKeyCredential,
+} from '@azure/storage-blob';
 
 const ALLOWED_MIME_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 
 @Injectable()
 export class FileUploadService {
-  private s3: AWS.S3;
-  private readonly bucket: string;
+  private blobServiceClient: BlobServiceClient;
+  private readonly container: string;
   private readonly enabled: boolean;
+  private readonly accountName: string;
+  private readonly accountKey: string;
   private readonly logger = new Logger(FileUploadService.name);
 
   constructor(private configService: ConfigService) {
-    const accessKeyId = this.configService.get<string>('AWS_ACCESS_KEY_ID');
-    const secretAccessKey = this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
-    this.bucket = this.configService.get<string>('AWS_S3_BUCKET') || 'nmsl-medical-files';
-    this.enabled = !!accessKeyId && !accessKeyId.startsWith('your_');
+    const connectionString = this.configService.get<string>('AZURE_STORAGE_CONNECTION_STRING');
+    this.container =
+      this.configService.get<string>('AZURE_STORAGE_CONTAINER') || 'nmsl-medical-files';
+    this.enabled = !!connectionString && !connectionString.startsWith('your_');
 
     if (this.enabled) {
-      this.s3 = new AWS.S3({
-        accessKeyId,
-        secretAccessKey,
-        region: this.configService.get<string>('AWS_REGION') || 'us-east-1',
-      });
+      this.blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+      const nameMatch = connectionString.match(/AccountName=([^;]+)/);
+      const keyMatch = connectionString.match(/AccountKey=([^;]+)/);
+      this.accountName = nameMatch ? nameMatch[1] : '';
+      this.accountKey = keyMatch ? keyMatch[1] : '';
     } else {
-      this.logger.warn('AWS S3 not configured. File uploads will return mock URLs.');
+      this.logger.warn('Azure Blob Storage not configured. File uploads will return mock URLs.');
     }
   }
 
@@ -42,30 +49,47 @@ export class FileUploadService {
     this.validateFile(file);
 
     if (!this.enabled) {
-      const mockUrl = `https://mock-s3.nmsl.com/${folder}/${Date.now()}_${file.originalname}`;
-      this.logger.log(`[S3 MOCK] Uploaded: ${mockUrl}`);
+      const mockUrl = `https://mock-azure.nmsl.com/${this.container}/${folder}/${Date.now()}_${file.originalname}`;
+      this.logger.log(`[AZURE MOCK] Uploaded: ${mockUrl}`);
       return mockUrl;
     }
 
-    const key = `${folder}/${Date.now()}_${file.originalname}`;
-    const params: AWS.S3.PutObjectRequest = {
-      Bucket: this.bucket,
-      Key: key,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-      ACL: 'private',
-    };
+    const blobName = `${folder}/${Date.now()}_${file.originalname}`;
+    const containerClient = this.blobServiceClient.getContainerClient(this.container);
+    await containerClient.createIfNotExists();
 
-    const result = await this.s3.upload(params).promise();
-    return result.Location;
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+    await blockBlobClient.uploadData(file.buffer, {
+      blobHTTPHeaders: { blobContentType: file.mimetype },
+    });
+
+    return blockBlobClient.url;
   }
 
-  async getSignedUrl(key: string): Promise<string> {
-    if (!this.enabled) return key;
-    return this.s3.getSignedUrlPromise('getObject', {
-      Bucket: this.bucket,
-      Key: key,
-      Expires: 3600,
-    });
+  async getSignedUrl(blobUrl: string): Promise<string> {
+    if (!this.enabled) return blobUrl;
+
+    const urlObj = new URL(blobUrl);
+    const blobName = urlObj.pathname.replace(`/${this.container}/`, '');
+
+    const sharedKeyCredential = new StorageSharedKeyCredential(
+      this.accountName,
+      this.accountKey,
+    );
+
+    const expiresOn = new Date();
+    expiresOn.setHours(expiresOn.getHours() + 1);
+
+    const sasToken = generateBlobSASQueryParameters(
+      {
+        containerName: this.container,
+        blobName,
+        permissions: BlobSASPermissions.parse('r'),
+        expiresOn,
+      },
+      sharedKeyCredential,
+    ).toString();
+
+    return `${blobUrl}?${sasToken}`;
   }
 }
