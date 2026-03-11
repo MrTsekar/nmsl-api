@@ -1,0 +1,206 @@
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, In } from 'typeorm';
+import { DoctorAvailability } from '../entities/doctor-availability.entity';
+import { Appointment, AppointmentStatus } from '../../appointments/entities/appointment.entity';
+import { UpdateAvailabilityDto } from '../dto/update-availability.dto';
+import { MarkUnavailableDto } from '../dto/mark-unavailable.dto';
+import { CheckAvailabilityDto } from '../dto/check-availability.dto';
+import { User, UserRole } from '../../users/entities/user.entity';
+import { NotificationsService } from '../../notifications/services/notifications.service';
+import { NotificationType } from '../../notifications/entities/notification.entity';
+import { EmailService } from '../../notifications/services/email.service';
+import { UsersService } from '../../users/services/users.service';
+import { ChatGateway } from '../../chat/gateways/chat.gateway';
+
+@Injectable()
+export class DoctorsService {
+  constructor(
+    @InjectRepository(DoctorAvailability)
+    private readonly availabilityRepository: Repository<DoctorAvailability>,
+    @InjectRepository(Appointment)
+    private readonly appointmentsRepository: Repository<Appointment>,
+    private readonly usersService: UsersService,
+    private readonly notificationsService: NotificationsService,
+    private readonly emailService: EmailService,
+    private readonly chatGateway: ChatGateway,
+  ) {}
+
+  async getAvailability(doctorId: string): Promise<DoctorAvailability> {
+    const availability = await this.availabilityRepository.findOne({
+      where: { doctorId },
+    });
+    if (!availability) throw new NotFoundException('Availability not found for this doctor');
+    return availability;
+  }
+
+  async getAvailabilityByName(doctorName: string): Promise<DoctorAvailability> {
+    const decodedName = decodeURIComponent(doctorName);
+    const doctor = await this.usersService.findAll({
+      role: UserRole.DOCTOR,
+      search: decodedName,
+      page: 1,
+      limit: 1,
+    });
+
+    if (!doctor.users || doctor.users.length === 0) {
+      throw new NotFoundException(`Doctor '${decodedName}' not found`);
+    }
+
+    return this.getAvailability(doctor.users[0].id);
+  }
+
+  async checkAvailability(dto: CheckAvailabilityDto) {
+    const availability = await this.availabilityRepository.findOne({
+      where: { doctorId: dto.doctorId },
+    });
+
+    if (!availability) {
+      return { available: false, reason: 'Doctor has no schedule configured' };
+    }
+
+    const dayOfWeek = new Date(dto.date).toLocaleDateString('en-US', {
+      weekday: 'long',
+    });
+
+    if (!availability.availableDays.includes(dayOfWeek)) {
+      return { available: false, reason: `Doctor is not available on ${dayOfWeek}` };
+    }
+
+    if (!availability.timeSlots.includes(dto.time)) {
+      return { available: false, reason: 'Time slot does not exist' };
+    }
+
+    const isBooked = availability.bookedSlots?.some(
+      (s) => s.date === dto.date && s.time === dto.time,
+    );
+    if (isBooked) {
+      return { available: false, reason: 'Time slot is already booked' };
+    }
+
+    const isUnavailable = availability.unavailableSlots?.some(
+      (s) => s.date === dto.date && s.time === dto.time,
+    );
+    if (isUnavailable) {
+      return { available: false, reason: 'Time slot is marked unavailable' };
+    }
+
+    return { available: true };
+  }
+
+  async updateAvailability(
+    doctorId: string,
+    dto: UpdateAvailabilityDto,
+    currentUser: User,
+  ): Promise<DoctorAvailability> {
+    if (
+      currentUser.role !== UserRole.ADMIN &&
+      currentUser.id !== doctorId
+    ) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    let availability = await this.availabilityRepository.findOne({
+      where: { doctorId },
+    });
+
+    if (!availability) {
+      availability = this.availabilityRepository.create({
+        doctorId,
+        availableDays: [],
+        timeSlots: [],
+        bookedSlots: [],
+        unavailableSlots: [],
+      });
+    }
+
+    if (dto.availableDays !== undefined) availability.availableDays = dto.availableDays;
+    if (dto.timeSlots !== undefined) availability.timeSlots = dto.timeSlots;
+
+    return this.availabilityRepository.save(availability);
+  }
+
+  async markUnavailable(
+    doctorId: string,
+    dto: MarkUnavailableDto,
+    currentUser: User,
+  ) {
+    if (
+      currentUser.role !== UserRole.ADMIN &&
+      currentUser.id !== doctorId
+    ) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const availability = await this.availabilityRepository.findOne({
+      where: { doctorId },
+    });
+
+    if (!availability) throw new NotFoundException('Availability not found');
+
+    const currentUnavailable = availability.unavailableSlots || [];
+    availability.unavailableSlots = [
+      ...currentUnavailable,
+      ...dto.slots.map((s) => ({ date: s.date, time: s.time, reason: s.reason })),
+    ];
+    await this.availabilityRepository.save(availability);
+
+    const conflictedAppointments = [];
+
+    for (const slot of dto.slots) {
+      const appointments = await this.appointmentsRepository.find({
+        where: {
+          doctorId,
+          appointmentDate: slot.date,
+          appointmentTime: slot.time,
+          status: In([AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED]),
+        },
+      });
+
+      for (const appt of appointments) {
+        appt.isConflicted = true;
+        await this.appointmentsRepository.save(appt);
+        conflictedAppointments.push(appt);
+
+        const notification = await this.notificationsService.create({
+          userId: appt.patientId,
+          type: NotificationType.APPOINTMENT_CONFLICT,
+          title: 'Appointment Needs Rebooking',
+          message: `Your appointment with ${appt.doctorName} on ${appt.appointmentDate} at ${appt.appointmentTime} is no longer available. Please rebook.`,
+          actionUrl: '/app/appointments',
+          metadata: { appointmentId: appt.id, originalDoctorId: doctorId },
+        });
+
+        this.chatGateway.emitNotification(appt.patientId, notification);
+        this.chatGateway.emitAppointmentUpdate(appt.patientId, appt);
+
+        try {
+          const patient = await this.usersService.findById(appt.patientId);
+          await this.emailService.sendAppointmentConflict({ ...appt, patient });
+        } catch (e) {}
+      }
+    }
+
+    return {
+      success: true,
+      unavailableSlots: dto.slots,
+      conflictedAppointments,
+      message: `${conflictedAppointments.length} appointments affected. Patients have been notified.`,
+    };
+  }
+
+  async createDefaultAvailability(doctorId: string): Promise<DoctorAvailability> {
+    const availability = this.availabilityRepository.create({
+      doctorId,
+      availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      timeSlots: ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00'],
+      bookedSlots: [],
+      unavailableSlots: [],
+    });
+    return this.availabilityRepository.save(availability);
+  }
+}
