@@ -17,6 +17,7 @@ export enum AppointmentStatus {
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
   REJECTED = 'rejected',
+  NO_SHOW = 'no-show',
 }
 
 export class Prescription {
@@ -83,6 +84,12 @@ export class Appointment {
 
   @Column({ default: false })
   isConflicted: boolean;
+
+  @Column({ nullable: true })
+  visitType: string; // 'Physical' | 'Telemedicine'
+
+  @Column({ type: 'text', nullable: true })
+  rescheduleReason: string;
 
   @Column({ nullable: true })
   originalAppointmentId: string;

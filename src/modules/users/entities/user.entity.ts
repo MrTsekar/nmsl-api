@@ -13,6 +13,7 @@ export enum UserRole {
   PATIENT = 'patient',
   DOCTOR = 'doctor',
   ADMIN = 'admin',
+  APPOINTMENT_OFFICER = 'appointment_officer',
 }
 
 export enum MedicalSpecialty {
@@ -89,6 +90,9 @@ export class User {
 
   @Column({ default: true })
   isActive: boolean;
+
+  @Column({ nullable: true })
+  gender: string; // 'male' | 'female' | 'other'
 
   @Column({ default: false })
   emailVerified: boolean;
