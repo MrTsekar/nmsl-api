@@ -4,7 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike } from 'typeorm';
+import { Repository, ILike, In } from 'typeorm';
 import { User, UserRole } from '../entities/user.entity';
 import { UpdateUserDto } from '../dto/update-user.dto';
 
@@ -54,6 +54,10 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<User> {
     return this.usersRepository.findOne({ where: { email } });
+  }
+
+  async findByResetToken(token: string): Promise<User> {
+    return this.usersRepository.findOne({ where: { resetPasswordToken: token } });
   }
 
   async create(data: Partial<User>): Promise<User> {
@@ -107,5 +111,29 @@ export class UsersService {
 
   async countByRole(role: UserRole): Promise<number> {
     return this.usersRepository.count({ where: { role } });
+  }
+
+  async findPortalUsers(query: { role?: string; location?: string }): Promise<User[]> {
+    const where: any = {};
+    if (query.role) {
+      where.role = query.role;
+    } else {
+      where.role = In([UserRole.ADMIN, UserRole.APPOINTMENT_OFFICER]);
+    }
+    if (query.location) where.location = ILike(`%${query.location}%`);
+    return this.usersRepository.find({ where, order: { createdAt: 'DESC' } });
+  }
+
+  async findAdmins(): Promise<{ admins: User[]; total: number }> {
+    const admins = await this.usersRepository.find({
+      where: { role: In([UserRole.ADMIN, UserRole.APPOINTMENT_OFFICER]) },
+      order: { createdAt: 'DESC' },
+    });
+    return { admins, total: admins.length };
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    const user = await this.findById(id);
+    await this.usersRepository.remove(user);
   }
 }

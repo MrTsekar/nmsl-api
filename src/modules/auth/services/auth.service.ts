@@ -8,11 +8,12 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { UsersService } from '../../users/services/users.service';
-import { SignUpDto } from '../dto/sign-up.dto';
 import { SignInDto } from '../dto/sign-in.dto';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
-import { UserRole } from '../../users/entities/user.entity';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
+import { ChangePasswordDto } from '../dto/change-password.dto';
+import { User } from '../../users/entities/user.entity';
 import { EmailService } from '../../notifications/services/email.service';
 
 @Injectable()
@@ -22,19 +23,6 @@ export class AuthService {
     private jwtService: JwtService,
     private emailService: EmailService,
   ) {}
-
-  async signUp(dto: SignUpDto) {
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const user = await this.usersService.create({
-      ...dto,
-      password: hashedPassword,
-      role: UserRole.PATIENT,
-    });
-
-    const token = this.generateToken(user.id, user.role);
-    const { password, resetPasswordToken, resetPasswordExpires, ...userWithoutPassword } = user as any;
-    return { token, user: userWithoutPassword };
-  }
 
   async signIn(dto: SignInDto) {
     const user = await this.usersService.findByEmail(dto.email);
@@ -76,11 +64,15 @@ export class AuthService {
       console.error('Failed to send password reset email:', e.message);
     }
 
-    return { message: 'Password reset link sent to your email' };
+    const response: any = { message: 'Password reset link sent to your email' };
+    if (process.env.NODE_ENV !== 'production') {
+      response.debug_token = token;
+    }
+    return response;
   }
 
   async resetPassword(dto: ResetPasswordDto) {
-    const user = await this.usersService.findByEmail(dto.email);
+    const user = await this.usersService.findByResetToken(dto.token);
     if (!user) throw new NotFoundException('User not found');
 
     if (
@@ -91,14 +83,30 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired reset token');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
     await this.usersService.updateRaw(user.id, {
       password: hashedPassword,
       resetPasswordToken: null,
       resetPasswordExpires: null,
     });
 
-    return { message: 'Password reset successfully' };
+    return { success: true };
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<User> {
+    await this.usersService.updateRaw(userId, dto as Partial<User>);
+    return this.usersService.findById(userId);
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.usersService.findById(userId);
+    const isValid = await bcrypt.compare(dto.currentPassword, user.password);
+    if (!isValid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+    const hashed = await bcrypt.hash(dto.newPassword, 10);
+    await this.usersService.updateRaw(userId, { password: hashed } as any);
+    return { success: true, message: 'Password changed successfully' };
   }
 
   private generateToken(userId: string, role: string): string {

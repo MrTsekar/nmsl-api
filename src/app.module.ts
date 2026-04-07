@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Controller, Get } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -12,6 +12,11 @@ import { MedicalResultsModule } from './modules/medical-results/medical-results.
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { FileUploadModule } from './modules/file-upload/file-upload.module';
+import { NmslServicesModule } from './modules/services/services.module';
+import { StatisticsModule } from './modules/statistics/statistics.module';
+import { PartnersModule } from './modules/partners/partners.module';
+import { BoardMembersModule } from './modules/board-members/board-members.module';
+import { ContactModule } from './modules/contact/contact.module';
 
 import { User } from './modules/users/entities/user.entity';
 import { Appointment } from './modules/appointments/entities/appointment.entity';
@@ -20,6 +25,24 @@ import { ChatConversation } from './modules/chat/entities/conversation.entity';
 import { Message } from './modules/chat/entities/message.entity';
 import { MedicalResult } from './modules/medical-results/entities/medical-result.entity';
 import { Notification } from './modules/notifications/entities/notification.entity';
+import { Service } from './modules/services/entities/service.entity';
+import { Statistic } from './modules/statistics/entities/statistic.entity';
+import { Partner } from './modules/partners/entities/partner.entity';
+import { BoardMember } from './modules/board-members/entities/board-member.entity';
+import { ContactInfo } from './modules/contact/entities/contact-info.entity';
+
+@Controller()
+export class AppController {
+  @Get()
+  health() {
+    return {
+      status: 'ok',
+      message: 'NMSL Healthcare API is running',
+      version: '1.0',
+      docs: '/api/docs',
+    };
+  }
+}
 
 @Module({
   imports: [
@@ -45,6 +68,11 @@ import { Notification } from './modules/notifications/entities/notification.enti
           Message,
           MedicalResult,
           Notification,
+          Service,
+          Statistic,
+          Partner,
+          BoardMember,
+          ContactInfo,
         ],
         synchronize: config.get<string>('DATABASE_SYNC') === 'true',
         logging: config.get<string>('NODE_ENV') !== 'production',
@@ -76,6 +104,12 @@ import { Notification } from './modules/notifications/entities/notification.enti
     NotificationsModule,
     AdminModule,
     FileUploadModule,
+    NmslServicesModule,
+    StatisticsModule,
+    PartnersModule,
+    BoardMembersModule,
+    ContactModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}
