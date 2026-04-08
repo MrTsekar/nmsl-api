@@ -4,19 +4,16 @@ import {
   IsBoolean,
   IsArray,
   ValidateNested,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ServiceCategory } from '../entities/service.entity';
 
 export class KeyServiceDto {
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  id?: string;
-
   @ApiProperty()
   @IsString()
-  name: string;
+  title: string;
 
   @ApiProperty()
   @IsString()
@@ -28,25 +25,31 @@ export class CreateServiceDto {
   @IsString()
   name: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ enum: ServiceCategory })
+  @IsEnum(ServiceCategory)
+  category: ServiceCategory;
+
+  @ApiProperty()
   @IsString()
-  shortDescription?: string;
+  location: string;
+
+  @ApiProperty()
+  @IsString()
+  shortDescription: string;
+
+  @ApiProperty()
+  @IsString()
+  fullDescription: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  longDescription?: string;
+  bannerImageUrl?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  category?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  image?: string;
+  iconImageUrl?: string;
 
   @ApiPropertyOptional({ type: [KeyServiceDto] })
   @IsOptional()
