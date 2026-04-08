@@ -6,6 +6,11 @@ export class UpdateAppointmentStatusDto {
   @ApiProperty({ enum: ['confirmed', 'rejected'] })
   @IsEnum(['confirmed', 'rejected'])
   status: 'confirmed' | 'rejected';
+
+  @ApiPropertyOptional({ description: 'Reason for rejection or additional notes' })
+  @IsOptional()
+  @IsString()
+  reason?: string;
 }
 
 export class RescheduleAppointmentAdminDto {

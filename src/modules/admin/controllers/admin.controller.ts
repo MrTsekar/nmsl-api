@@ -26,7 +26,8 @@ import { UpdateAppointmentStatusDto, RescheduleAppointmentAdminDto } from '../dt
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { UserRole, MedicalSpecialty } from '../../users/entities/user.entity';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { User, UserRole, MedicalSpecialty } from '../../users/entities/user.entity';
 
 @ApiTags('Admin')
 @ApiBearerAuth('JWT')
@@ -155,8 +156,9 @@ export class AdminController {
   updateAppointmentStatus(
     @Param('id') id: string,
     @Body() dto: UpdateAppointmentStatusDto,
+    @CurrentUser() user: User,
   ) {
-    return this.adminService.updateAppointmentStatus(id, dto);
+    return this.adminService.updateAppointmentStatus(id, dto, user);
   }
 
   @Patch('appointments/:id/reschedule')
@@ -165,8 +167,9 @@ export class AdminController {
   rescheduleAppointment(
     @Param('id') id: string,
     @Body() dto: RescheduleAppointmentAdminDto,
+    @CurrentUser() user: User,
   ) {
-    return this.adminService.rescheduleAppointment(id, dto);
+    return this.adminService.rescheduleAppointment(id, dto, user);
   }
 }
 

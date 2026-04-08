@@ -351,4 +351,36 @@ export class AppointmentsService {
 
     return saved;
   }
+
+  /**
+   * Update lock fields in appointment entity
+   * Used by appointment locking system
+   */
+  async updateLockFields(
+    appointmentId: string,
+    lockedBy: string | null,
+    lockedAt: Date | null,
+  ): Promise<Appointment> {
+    const appointment = await this.findById(appointmentId);
+    appointment.lockedBy = lockedBy;
+    appointment.lockedAt = lockedAt;
+    return this.appointmentsRepository.save(appointment);
+  }
+
+  /**
+   * Auto-unlock appointment when status changes to final states
+   */
+  private async autoUnlockIfFinalStatus(status: AppointmentStatus, appointmentId: string) {
+    const finalStatuses = [
+      AppointmentStatus.CONFIRMED,
+      AppointmentStatus.REJECTED,
+      AppointmentStatus.COMPLETED,
+      AppointmentStatus.CANCELLED,
+      AppointmentStatus.NO_SHOW,
+    ];
+
+    if (finalStatuses.includes(status)) {
+      await this.updateLockFields(appointmentId, null, null);
+    }
+  }
 }

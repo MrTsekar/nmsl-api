@@ -4,6 +4,7 @@ import { Appointment } from './entities/appointment.entity';
 import { DoctorAvailability } from '../doctors/entities/doctor-availability.entity';
 import { AppointmentsController } from './controllers/appointments.controller';
 import { AppointmentsService } from './services/appointments.service';
+import { AppointmentLockService } from './services/appointment-lock.service';
 import { UsersModule } from '../users/users.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ChatModule } from '../chat/chat.module';
@@ -16,7 +17,7 @@ import { ChatModule } from '../chat/chat.module';
     ChatModule,
   ],
   controllers: [AppointmentsController],
-  providers: [AppointmentsService],
-  exports: [AppointmentsService],
+  providers: [AppointmentsService, AppointmentLockService],
+  exports: [AppointmentsService, AppointmentLockService],
 })
 export class AppointmentsModule {}

@@ -37,12 +37,22 @@ async function bootstrap() {
 
   // Swagger documentation
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('NMSL Healthcare API')
+    .setTitle('NMSL Portal API')
     .setDescription(
-      'REST API for NMSL Healthcare telemedicine platform.\n\n' +
+      'Comprehensive healthcare management system API for Nigerian Medical Services Limited (NMSL).\n\n' +
       '**Base URL:** `/api/v1`\n\n' +
-      '**WebSocket:** Connect to `/ws` with `auth.token` in handshake.\n\n' +
-      '**Roles:** patient | doctor | admin',
+      '**Key Features:**\n' +
+      '- JWT Authentication & Authorization\n' +
+      '- Role-Based Access Control (Admin, Appointment Officer, Patient, Doctor)\n' +
+      '- Appointment Locking System with Redis\n' +
+      '- Comprehensive Audit Trail\n' +
+      '- Real-time Chat & Notifications\n' +
+      '- Medical Records Management\n\n' +
+      '**Roles:**\n' +
+      '- `admin` - Full system access\n' +
+      '- `appointment_officer` - Process appointments with exclusive locks\n' +
+      '- `doctor` - Manage consultations and appointments\n' +
+      '- `patient` - Book appointments and access medical records',
     )
     .setVersion('1.0')
     .addBearerAuth(
@@ -51,12 +61,18 @@ async function bootstrap() {
     )
     .addTag('Auth', 'Authentication endpoints')
     .addTag('Users', 'User management')
-    .addTag('Appointments', 'Appointment booking and management')
-    .addTag('Doctors / Availability', 'Doctor schedule management')
+    .addTag('Admin', 'Admin management endpoints')
+    .addTag('Doctors', 'Doctor management')
+    .addTag('Appointments', 'Appointment management')
+    .addTag('Audit', 'Audit logs and statistics')
+    .addTag('Services', 'Medical services catalog')
+    .addTag('Partners', 'Trusted partners')
+    .addTag('Board Members', 'Board of directors')
+    .addTag('Contact', 'Contact information')
+    .addTag('Statistics', 'Homepage statistics')
     .addTag('Chat', 'Real-time messaging')
-    .addTag('Medical Results', 'Lab results management')
-    .addTag('Notifications', 'Notification management')
-    .addTag('Admin', 'Admin dashboard and management')
+    .addTag('Notifications', 'User notifications')
+    .addTag('Medical Results', 'Medical test results')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

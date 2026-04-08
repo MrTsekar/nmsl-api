@@ -7,6 +7,7 @@ import { AdminService } from './services/admin.service';
 import { UsersModule } from '../users/users.module';
 import { DoctorsModule } from '../doctors/doctors.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     UsersModule,
     DoctorsModule,
     NotificationsModule,
+    AuditModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

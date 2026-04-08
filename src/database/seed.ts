@@ -1,0 +1,375 @@
+import { DataSource } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+import { User, UserRole, MedicalSpecialty } from '../modules/users/entities/user.entity';
+import { BoardMember } from '../modules/board-members/entities/board-member.entity';
+import { Partner } from '../modules/partners/entities/partner.entity';
+import { ContactInfo } from '../modules/contact/entities/contact-info.entity';
+import { Statistic } from '../modules/statistics/entities/statistic.entity';
+import { Service, ServiceCategory } from '../modules/services/entities/service.entity';
+import { Appointment, AppointmentStatus } from '../modules/appointments/entities/appointment.entity';
+
+export async function seedDatabase(dataSource: DataSource) {
+  console.log('🌱 Starting database seeding...');
+
+  // 1. Create Admin Users
+  const userRepository = dataSource.getRepository(User);
+  
+  const adminPassword = await bcrypt.hash('Admin@123', 10);
+  const admin = userRepository.create({
+    name: 'Emeka Nwosu',
+    email: 'admin@nmsl.app',
+    password: adminPassword,
+    role: UserRole.ADMIN,
+    location: 'Abuja',
+    state: 'FCT',
+    address: 'NMSL Headquarters, Central Business District, Abuja',
+    phone: '+234 801 234 5678',
+    gender: 'male',
+    isActive: true,
+  });
+  await userRepository.save(admin);
+  console.log('✅ Created admin user');
+
+  // Create Appointment Officers
+  const officer1 = userRepository.create({
+    name: 'Sarah Johnson',
+    email: 'officer1@nmsl.app',
+    password: adminPassword,
+    role: UserRole.APPOINTMENT_OFFICER,
+    location: 'Lagos',
+    state: 'Lagos',
+    phone: '+234 802 345 6789',
+    gender: 'female',
+    isActive: true,
+  });
+
+  const officer2 = userRepository.create({
+    name: 'Michael Chen',
+    email: 'officer2@nmsl.app',
+    password: adminPassword,
+    role: UserRole.APPOINTMENT_OFFICER,
+    location: 'Abuja',
+    state: 'FCT',
+    phone: '+234 803 456 7890',
+    gender: 'male',
+    isActive: true,
+  });
+
+  await userRepository.save([officer1, officer2]);
+  console.log('✅ Created appointment officers');
+
+  // 2. Create Doctors
+  const doctors = [
+    {
+      name: 'Dr. Ken Wu',
+      email: 'ken.wu@nmsl.app',
+      specialty: MedicalSpecialty.GENERAL_PRACTICE,
+      qualifications: 'MBBS, FMCGP',
+      location: 'Lagos',
+      state: 'Lagos',
+      phone: '+234 805 111 2233',
+      consultationFee: 15000,
+    },
+    {
+      name: 'Dr. Sarah Chen',
+      email: 'sarah.chen@nmsl.app',
+      specialty: MedicalSpecialty.CARDIOLOGY,
+      qualifications: 'MBBS, MD (Cardiology), FACC',
+      location: 'Abuja',
+      state: 'FCT',
+      phone: '+234 806 222 3344',
+      consultationFee: 25000,
+    },
+    {
+      name: 'Dr. Amina Yusuf',
+      email: 'amina.yusuf@nmsl.app',
+      specialty: MedicalSpecialty.PEDIATRICS,
+      qualifications: 'MBBS, FWACP (Pediatrics)',
+      location: 'Kaduna',
+      state: 'Kaduna',
+      phone: '+234 807 333 4455',
+      consultationFee: 20000,
+    },
+    {
+      name: 'Dr. Chidi Okafor',
+      email: 'chidi.okafor@nmsl.app',
+      specialty: MedicalSpecialty.ORTHOPEDICS,
+      qualifications: 'MBBS, FWACS (Orthopedics)',
+      location: 'Port Harcourt',
+      state: 'Rivers',
+      phone: '+234 808 444 5566',
+      consultationFee: 22000,
+    },
+    {
+      name: 'Dr. Fatima Abubakar',
+      email: 'fatima.abubakar@nmsl.app',
+      specialty: MedicalSpecialty.GYNECOLOGY,
+      qualifications: 'MBBS, FWACS (Obstetrics & Gynecology)',
+      location: 'Benin',
+      state: 'Edo',
+      phone: '+234 809 555 6677',
+      consultationFee: 23000,
+    },
+  ];
+
+  const doctorPassword = await bcrypt.hash('Doctor@123', 10);
+  const doctorEntities = doctors.map(doc =>
+    userRepository.create({
+      ...doc,
+      password: doctorPassword,
+      role: UserRole.DOCTOR,
+      isActive: true,
+      gender: doc.name.includes('Dr. Sarah') || doc.name.includes('Amina') || doc.name.includes('Fatima') ? 'female' : 'male',
+    })
+  );
+  await userRepository.save(doctorEntities);
+  console.log('✅ Created doctors');
+
+  // 3. Create Sample Patients
+  const patientPassword = await bcrypt.hash('Patient@123', 10);
+  const patients = [
+    {
+      name: 'John Doe',
+      email: 'john.doe@email.com',
+      location: 'Abuja',
+      state: 'FCT',
+      phone: '+234 811 111 2222',
+      gender: 'male',
+    },
+    {
+      name: 'Jane Smith',
+      email: 'jane.smith@email.com',
+      location: 'Lagos',
+      state: 'Lagos',
+      phone: '+234 812 222 3333',
+      gender: 'female',
+    },
+  ];
+
+  const patientEntities = patients.map(p =>
+    userRepository.create({
+      ...p,
+      password: patientPassword,
+      role: UserRole.PATIENT,
+      isActive: true,
+    })
+  );
+  await userRepository.save(patientEntities);
+  console.log('✅ Created sample patients');
+
+  // 4. Create Board Members
+  const boardMemberRepository = dataSource.getRepository(BoardMember);
+  const boardMembers = [
+    {
+      name: 'Mr. Adedapo A. Segun',
+      title: 'Chairman',
+      photoUrl: '/board/adedapo-segun.jpg',
+      bio: 'Leadership committed to excellence in healthcare delivery across Nigeria',
+      order: 1,
+      isActive: true,
+    },
+    {
+      name: 'Dr. Chioma Eze',
+      title: 'Chief Medical Officer',
+      photoUrl: '/board/chioma-eze.jpg',
+      bio: 'Experienced medical professional with 25+ years in healthcare management',
+      order: 2,
+      isActive: true,
+    },
+    {
+      name: 'Mr. Ibrahim Musa',
+      title: 'Executive Director',
+      photoUrl: '/board/ibrahim-musa.jpg',
+      bio: 'Strategic leader driving innovation in healthcare services',
+      order: 3,
+      isActive: true,
+    },
+  ];
+
+  await boardMemberRepository.save(boardMembers);
+  console.log('✅ Created board members');
+
+  // 5. Create Partners
+  const partnerRepository = dataSource.getRepository(Partner);
+  const partners = [
+    {
+      name: 'African Medical Centre of Excellence Abuja',
+      logoUrl: '/partners/amce-abuja.png',
+      description: 'Leading medical excellence center in Abuja',
+      order: 1,
+      isActive: true,
+    },
+    {
+      name: 'Lagos University Teaching Hospital',
+      logoUrl: '/partners/luth.png',
+      description: 'Premier teaching hospital in Lagos',
+      order: 2,
+      isActive: true,
+    },
+    {
+      name: 'National Hospital Abuja',
+      logoUrl: '/partners/national-hospital.png',
+      description: 'Federal tertiary healthcare institution',
+      order: 3,
+      isActive: true,
+    },
+  ];
+
+  await partnerRepository.save(partners);
+  console.log('✅ Created partners');
+
+  // 6. Create Contact Information
+  const contactRepository = dataSource.getRepository(ContactInfo);
+  const contact = contactRepository.create({
+    phone: '+234 903 193 0032',
+    emailPrimary: 'nmshutako@nnpcgroup.com',
+    emailSecondary: 'nmshutako@gmail.com',
+    addressLine1: 'PLOT 201 NGOZI OKONJO-IWEALA WAY',
+    addressLine2: 'UTAKO, ABUJA, NIGERIA',
+    city: 'Abuja',
+    country: 'Nigeria',
+    officeHours: 'Monday - Sunday: 24 Hours',
+    emergencyHours: 'Available 24/7',
+  });
+  await contactRepository.save(contact);
+  console.log('✅ Created contact information');
+
+  // 7. Create Statistics
+  const statisticRepository = dataSource.getRepository(Statistic);
+  const statistics = [
+    {
+      value: '15+',
+      label: 'Years',
+      sublabel: 'Healthcare Excellence',
+      icon: 'award',
+      order: 1,
+    },
+    {
+      value: '6',
+      label: 'Facilities',
+      sublabel: 'Across Nigeria',
+      icon: 'building',
+      order: 2,
+    },
+    {
+      value: '250K+',
+      label: 'Patients',
+      sublabel: 'Treated Annually',
+      icon: 'users',
+      order: 3,
+    },
+    {
+      value: '24/7',
+      label: 'Emergency',
+      sublabel: 'Services Available',
+      icon: 'clock',
+      order: 4,
+    },
+  ];
+
+  await statisticRepository.save(statistics);
+  console.log('✅ Created statistics');
+
+  // 8. Create Services
+  const serviceRepository = dataSource.getRepository(Service);
+  const services = [
+    {
+      name: 'Accident & Emergency',
+      category: ServiceCategory.EMERGENCY_SERVICES,
+      location: 'All Locations',
+      shortDescription: '24/7 emergency care and trauma services',
+      fullDescription: 'Our Accident & Emergency department provides round-the-clock emergency medical care with state-of-the-art facilities and experienced medical professionals ready to handle all types of medical emergencies.',
+      bannerImageUrl: '/services/emergency-banner.jpg',
+      iconImageUrl: '/services/emergency-icon.svg',
+      keyServices: [
+        { title: '24/7 Emergency Response', description: 'Immediate care for urgent medical cases' },
+        { title: 'Trauma Unit', description: 'Advanced trauma care facilities' },
+        { title: 'Ambulance Services', description: 'Rapid response ambulance services' },
+      ],
+      isActive: true,
+    },
+    {
+      name: 'General Practice',
+      category: ServiceCategory.PRIMARY_CARE,
+      location: 'All Locations',
+      shortDescription: 'Comprehensive primary healthcare services',
+      fullDescription: 'Our General Practice department offers comprehensive primary healthcare services including routine check-ups, preventive care, and management of common medical conditions.',
+      bannerImageUrl: '/services/general-practice-banner.jpg',
+      iconImageUrl: '/services/general-practice-icon.svg',
+      keyServices: [
+        { title: 'Routine Check-ups', description: 'Regular health assessments and screenings' },
+        { title: 'Preventive Care', description: 'Vaccination and health education' },
+        { title: 'Chronic Disease Management', description: 'Ongoing care for chronic conditions' },
+      ],
+      isActive: true,
+    },
+    {
+      name: 'Specialized Cardiology Care',
+      category: ServiceCategory.SPECIALIZED_CARE,
+      location: 'Abuja, Lagos',
+      shortDescription: 'Advanced cardiac care and treatment',
+      fullDescription: 'Our Cardiology department provides comprehensive cardiac care including diagnostics, treatment, and rehabilitation for various heart conditions.',
+      bannerImageUrl: '/services/cardiology-banner.jpg',
+      iconImageUrl: '/services/cardiology-icon.svg',
+      keyServices: [
+        { title: 'Cardiac Diagnostics', description: 'ECG, Echo, and stress tests' },
+        { title: 'Heart Disease Management', description: 'Treatment of cardiovascular conditions' },
+        { title: 'Cardiac Rehabilitation', description: 'Post-treatment recovery programs' },
+      ],
+      isActive: true,
+    },
+  ];
+
+  await serviceRepository.save(services);
+  console.log('✅ Created services');
+
+  // 9. Create Sample Appointments
+  const appointmentRepository = dataSource.getRepository(Appointment);
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+  const appointments = [
+    {
+      patientId: patientEntities[0].id,
+      doctorId: doctorEntities[0].id,
+      patientName: patientEntities[0].name,
+      patientEmail: patientEntities[0].email,
+      patientPhone: patientEntities[0].phone,
+      doctorName: doctorEntities[0].name,
+      appointmentDate: tomorrowStr,
+      appointmentTime: '09:00',
+      status: AppointmentStatus.PENDING,
+      reason: 'Routine check-up',
+      specialty: doctorEntities[0].specialty,
+      location: doctorEntities[0].location,
+      fee: doctorEntities[0].consultationFee,
+      visitType: 'Physical',
+      isUrgent: false,
+      isConflicted: false,
+    },
+    {
+      patientId: patientEntities[1].id,
+      doctorId: doctorEntities[1].id,
+      patientName: patientEntities[1].name,
+      patientEmail: patientEntities[1].email,
+      patientPhone: patientEntities[1].phone,
+      doctorName: doctorEntities[1].name,
+      appointmentDate: tomorrowStr,
+      appointmentTime: '10:00',
+      status: AppointmentStatus.CONFIRMED,
+      reason: 'Cardiac consultation',
+      specialty: doctorEntities[1].specialty,
+      location: doctorEntities[1].location,
+      fee: doctorEntities[1].consultationFee,
+      visitType: 'Telemedicine',
+      isUrgent: false,
+      isConflicted: false,
+    },
+  ];
+
+  await appointmentRepository.save(appointments);
+  console.log('✅ Created sample appointments');
+
+  console.log('🎉 Database seeding completed successfully!');
+}

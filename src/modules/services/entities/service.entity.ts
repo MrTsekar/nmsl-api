@@ -6,6 +6,24 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export enum ServiceCategory {
+  EMERGENCY_SERVICES = 'Emergency Services',
+  SPECIALIZED_CARE = 'Specialized Care',
+  DENTAL_CARE = 'Dental Care',
+  PRIMARY_CARE = 'Primary Care',
+  SURGICAL_SERVICES = 'Surgical Services',
+  DIAGNOSTIC_SERVICES = 'Diagnostic Services',
+  WOMENS_HEALTH = "Women's Health",
+  PEDIATRIC_CARE = 'Pediatric Care',
+  MENTAL_HEALTH = 'Mental Health',
+  REHABILITATION = 'Rehabilitation',
+}
+
+export interface KeyServiceItem {
+  title: string;
+  description: string;
+}
+
 @Entity('services')
 export class Service {
   @PrimaryGeneratedColumn('uuid')
@@ -14,20 +32,29 @@ export class Service {
   @Column()
   name: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({
+    type: 'enum',
+    enum: ServiceCategory,
+  })
+  category: ServiceCategory;
+
+  @Column()
+  location: string; // Abuja, Lagos, Benin, Kaduna, Port Harcourt, Warri
+
+  @Column({ type: 'text' })
   shortDescription: string;
 
-  @Column({ type: 'text', nullable: true })
-  longDescription: string;
+  @Column({ type: 'text' })
+  fullDescription: string;
 
   @Column({ nullable: true })
-  category: string;
+  bannerImageUrl: string;
 
   @Column({ nullable: true })
-  image: string;
+  iconImageUrl: string;
 
-  @Column({ type: 'jsonb', nullable: true, default: [] })
-  keyServices: Array<{ id: string; name: string; description: string }>;
+  @Column({ type: 'jsonb', default: [] })
+  keyServices: KeyServiceItem[];
 
   @Column({ default: true })
   isActive: boolean;

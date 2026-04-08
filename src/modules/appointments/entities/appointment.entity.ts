@@ -12,12 +12,13 @@ import { User } from '../../users/entities/user.entity';
 
 export enum AppointmentStatus {
   PENDING = 'pending',
+  SCHEDULED = 'scheduled',
   CONFIRMED = 'confirmed',
   RESCHEDULED = 'rescheduled',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled',
   REJECTED = 'rejected',
+  COMPLETED = 'completed',
   NO_SHOW = 'no-show',
+  CANCELLED = 'cancelled',
 }
 
 export class Prescription {
@@ -34,6 +35,8 @@ export class Prescription {
 @Index(['appointmentDate'])
 @Index(['status'])
 @Index(['isConflicted'])
+@Index(['lockedBy'])
+@Index(['lockedAt'])
 @Index(['doctorId', 'appointmentDate'])
 export class Appointment {
   @PrimaryGeneratedColumn('uuid')
@@ -92,6 +95,26 @@ export class Appointment {
   rescheduleReason: string;
 
   @Column({ nullable: true })
+  // Additional fields from spec
+  @Column({ nullable: true })
+  patientEmail: string;
+
+  @Column({ nullable: true })
+  patientPhone: string;
+
+  @Column({ default: false })
+  isUrgent: boolean;
+
+  @Column({ type: 'text', nullable: true })
+  additionalComment: string;
+
+  // LOCKING FIELDS - CRITICAL FOR APPOINTMENT OFFICER WORKFLOW
+  @Column({ nullable: true })
+  lockedBy: string; // Email of the officer who locked it
+
+  @Column({ type: 'timestamp', nullable: true })
+  lockedAt: Date;
+
   originalAppointmentId: string;
 
   @CreateDateColumn()

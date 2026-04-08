@@ -2,6 +2,7 @@ import { Module, Controller, Get } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { CacheModule } from '@nestjs/cache-manager';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -17,6 +18,7 @@ import { StatisticsModule } from './modules/statistics/statistics.module';
 import { PartnersModule } from './modules/partners/partners.module';
 import { BoardMembersModule } from './modules/board-members/board-members.module';
 import { ContactModule } from './modules/contact/contact.module';
+import { AuditModule } from './modules/audit/audit.module';
 
 import { User } from './modules/users/entities/user.entity';
 import { Appointment } from './modules/appointments/entities/appointment.entity';
@@ -30,6 +32,8 @@ import { Statistic } from './modules/statistics/entities/statistic.entity';
 import { Partner } from './modules/partners/entities/partner.entity';
 import { BoardMember } from './modules/board-members/entities/board-member.entity';
 import { ContactInfo } from './modules/contact/entities/contact-info.entity';
+import { AuditLog } from './modules/audit/entities/audit-log.entity';
+import { redisConfig } from './config/redis.config';
 
 @Controller()
 export class AppController {
@@ -73,6 +77,7 @@ export class AppController {
           Partner,
           BoardMember,
           ContactInfo,
+          AuditLog,
         ],
         synchronize: config.get<string>('DATABASE_SYNC') === 'true',
         logging: config.get<string>('NODE_ENV') !== 'production',
@@ -95,6 +100,12 @@ export class AppController {
       }),
     }),
 
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: redisConfig,
+    }),
+
     AuthModule,
     UsersModule,
     AppointmentsModule,
@@ -103,6 +114,7 @@ export class AppController {
     MedicalResultsModule,
     NotificationsModule,
     AdminModule,
+    AuditModule,
     FileUploadModule,
     NmslServicesModule,
     StatisticsModule,

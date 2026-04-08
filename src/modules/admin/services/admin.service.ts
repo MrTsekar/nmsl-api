@@ -12,6 +12,8 @@ import { UpdateAppointmentStatusDto, RescheduleAppointmentAdminDto } from '../dt
 import { UsersService } from '../../users/services/users.service';
 import { DoctorsService } from '../../doctors/services/doctors.service';
 import { EmailService } from '../../notifications/services/email.service';
+import { AuditService } from '../../audit/audit.service';
+import { AuditAction } from '../../audit/entities/audit-log.entity';
 
 @Injectable()
 export class AdminService {
@@ -23,6 +25,7 @@ export class AdminService {
     private readonly usersService: UsersService,
     private readonly doctorsService: DoctorsService,
     private readonly emailService: EmailService,
+    private readonly auditService: AuditService,
   ) {}
 
   // ─── KPIs ────────────────────────────────────────────────────────────────
@@ -139,21 +142,58 @@ export class AdminService {
     });
   }
 
-  async updateAppointmentStatus(id: string, dto: UpdateAppointmentStatusDto): Promise<Appointment> {
+  async updateAppointmentStatus(id: string, dto: UpdateAppointmentStatusDto, performedBy?: User): Promise<Appointment> {
     const appt = await this.appointmentsRepository.findOne({ where: { id } });
     if (!appt) throw new NotFoundException('Appointment not found');
+    
+    const oldStatus = appt.status;
     appt.status = dto.status as AppointmentStatus;
-    return this.appointmentsRepository.save(appt);
+    const updated = await this.appointmentsRepository.save(appt);
+
+    // Create audit log for confirmed/rejected/completed status changes
+    if (performedBy && [AppointmentStatus.CONFIRMED, AppointmentStatus.REJECTED, AppointmentStatus.COMPLETED].includes(updated.status)) {
+      const actionMap = {
+        [AppointmentStatus.CONFIRMED]: AuditAction.ACCEPTED,
+        [AppointmentStatus.REJECTED]: AuditAction.REJECTED,
+        [AppointmentStatus.COMPLETED]: AuditAction.COMPLETED,
+      };
+
+      await this.auditService.createAuditLog({
+        appointmentId: updated.id,
+        patientName: updated.patientName,
+        action: actionMap[updated.status],
+        performedBy: performedBy.email,
+        performedByName: performedBy.name,
+        details: dto.reason || null,
+      });
+    }
+
+    return updated;
   }
 
-  async rescheduleAppointment(id: string, dto: RescheduleAppointmentAdminDto): Promise<Appointment> {
+  async rescheduleAppointment(id: string, dto: RescheduleAppointmentAdminDto, performedBy?: User): Promise<Appointment> {
     const appt = await this.appointmentsRepository.findOne({ where: { id } });
     if (!appt) throw new NotFoundException('Appointment not found');
+    
     appt.appointmentDate = dto.date;
     appt.appointmentTime = dto.time;
     appt.status = AppointmentStatus.RESCHEDULED;
     appt.rescheduleReason = dto.rescheduleReason ?? null;
-    return this.appointmentsRepository.save(appt);
+    const updated = await this.appointmentsRepository.save(appt);
+
+    // Create audit log for rescheduling
+    if (performedBy) {
+      await this.auditService.createAuditLog({
+        appointmentId: updated.id,
+        patientName: updated.patientName,
+        action: AuditAction.RESCHEDULED,
+        performedBy: performedBy.email,
+        performedByName: performedBy.name,
+        details: dto.rescheduleReason || null,
+      });
+    }
+
+    return updated;
   }
 }
 
