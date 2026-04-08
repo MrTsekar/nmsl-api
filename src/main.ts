@@ -70,9 +70,6 @@ async function bootstrap() {
     .addTag('Board Members', 'Board of directors')
     .addTag('Contact', 'Contact information')
     .addTag('Statistics', 'Homepage statistics')
-    .addTag('Chat', 'Real-time messaging')
-    .addTag('Notifications', 'User notifications')
-    .addTag('Medical Results', 'Medical test results')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

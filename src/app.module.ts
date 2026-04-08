@@ -8,9 +8,6 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { AppointmentsModule } from './modules/appointments/appointments.module';
 import { DoctorsModule } from './modules/doctors/doctors.module';
-import { ChatModule } from './modules/chat/chat.module';
-import { MedicalResultsModule } from './modules/medical-results/medical-results.module';
-import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { FileUploadModule } from './modules/file-upload/file-upload.module';
 import { NmslServicesModule } from './modules/services/services.module';
@@ -23,10 +20,6 @@ import { AuditModule } from './modules/audit/audit.module';
 import { User } from './modules/users/entities/user.entity';
 import { Appointment } from './modules/appointments/entities/appointment.entity';
 import { DoctorAvailability } from './modules/doctors/entities/doctor-availability.entity';
-import { ChatConversation } from './modules/chat/entities/conversation.entity';
-import { Message } from './modules/chat/entities/message.entity';
-import { MedicalResult } from './modules/medical-results/entities/medical-result.entity';
-import { Notification } from './modules/notifications/entities/notification.entity';
 import { Service } from './modules/services/entities/service.entity';
 import { Statistic } from './modules/statistics/entities/statistic.entity';
 import { Partner } from './modules/partners/entities/partner.entity';
@@ -68,10 +61,6 @@ export class AppController {
           User,
           Appointment,
           DoctorAvailability,
-          ChatConversation,
-          Message,
-          MedicalResult,
-          Notification,
           Service,
           Statistic,
           Partner,
@@ -110,9 +99,6 @@ export class AppController {
     UsersModule,
     AppointmentsModule,
     DoctorsModule,
-    ChatModule,
-    MedicalResultsModule,
-    NotificationsModule,
     AdminModule,
     AuditModule,
     FileUploadModule,
