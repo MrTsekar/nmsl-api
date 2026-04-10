@@ -28,7 +28,3 @@ coverage/
 
 # TypeScript incremental build info
 *.tsbuildinfo
-
-# Documentation files
-*.md
-!README.md

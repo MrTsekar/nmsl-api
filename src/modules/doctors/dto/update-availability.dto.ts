@@ -66,5 +66,24 @@ export class UpdateAvailabilityDto {
   @IsObject()
   @IsOptional()
   customTimes?: Record<string, TimeSlot>;
+
+  // Legacy fields for backward compatibility (to be deprecated)
+  @ApiPropertyOptional({
+    example: ['monday', 'tuesday', 'wednesday'],
+    description: '(DEPRECATED) Use "days" instead',
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  availableDays?: string[];
+
+  @ApiPropertyOptional({
+    example: ['09:00', '10:00', '11:00', '14:00', '15:00'],
+    description: '(DEPRECATED) Predefined time slots',
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  timeSlots?: string[];
 }
 

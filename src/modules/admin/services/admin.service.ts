@@ -222,6 +222,21 @@ export class AdminService {
       });
     }
 
+    // Send email notifications when appointment is accepted or rejected
+    if (updated.status === AppointmentStatus.CONFIRMED) {
+      // Send confirmation email to patient
+      await this.emailService.sendAppointmentAcceptedToPatient(updated);
+      
+      // Get doctor's email and send notification
+      const doctor = await this.doctorsRepository.findOne({ where: { id: updated.doctorId } });
+      if (doctor) {
+        await this.emailService.sendAppointmentAcceptedToDoctor(updated, doctor.email);
+      }
+    } else if (updated.status === AppointmentStatus.REJECTED) {
+      // Send rejection email to patient with reason
+      await this.emailService.sendAppointmentRejectedToPatient(updated, dto.reason);
+    }
+
     return updated;
   }
 

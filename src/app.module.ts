@@ -18,6 +18,7 @@ import { ContactModule } from './modules/contact/contact.module';
 import { AuditModule } from './modules/audit/audit.module';
 
 import { User } from './modules/users/entities/user.entity';
+import { Doctor } from './modules/doctors/entities/doctor.entity';
 import { Appointment } from './modules/appointments/entities/appointment.entity';
 import { DoctorAvailability } from './modules/doctors/entities/doctor-availability.entity';
 import { Service } from './modules/services/entities/service.entity';
@@ -59,6 +60,7 @@ export class AppController {
         database: config.get<string>('DATABASE_NAME', 'nmsl_healthcare'),
         entities: [
           User,
+          Doctor,
           Appointment,
           DoctorAvailability,
           Service,
@@ -70,10 +72,9 @@ export class AppController {
         ],
         synchronize: config.get<string>('DATABASE_SYNC') === 'true',
         logging: config.get<string>('NODE_ENV') !== 'production',
-        ssl:
-          config.get<string>('NODE_ENV') === 'production'
-            ? { rejectUnauthorized: false }
-            : false,
+        ssl: config.get<string>('DATABASE_SSL') === 'true'
+          ? { rejectUnauthorized: false }
+          : false,
       }),
     }),
 

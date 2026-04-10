@@ -7,4 +7,5 @@ export default registerAs('database', () => ({
   password: process.env.DATABASE_PASSWORD || '',
   name: process.env.DATABASE_NAME || 'nmsl_healthcare',
   synchronize: process.env.DATABASE_SYNC === 'true',
+  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
 }));

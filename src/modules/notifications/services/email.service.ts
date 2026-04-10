@@ -129,4 +129,96 @@ export class EmailService {
       `,
     });
   }
+
+  // Send appointment confirmation to patient when officer accepts booking
+  async sendAppointmentAcceptedToPatient(appointment: any) {
+    await this.send({
+      to: appointment.patientEmail,
+      from: this.from,
+      subject: `Appointment Confirmed - ${appointment.doctorName}`,
+      html: `
+        <h1>🎉 Your Appointment is Confirmed!</h1>
+        <p>Dear ${appointment.patientName},</p>
+        <p>Great news! Your appointment request has been confirmed.</p>
+        
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h2 style="margin-top: 0;">Appointment Details</h2>
+          <p><strong>Doctor:</strong> ${appointment.doctorName}</p>
+          <p><strong>Specialty:</strong> ${appointment.specialty}</p>
+          <p><strong>Date:</strong> ${new Date(appointment.appointmentDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <p><strong>Time:</strong> ${appointment.appointmentTime}</p>
+          <p><strong>Location:</strong> ${appointment.location}</p>
+          <p><strong>Consultation Fee:</strong> ₦${appointment.fee}</p>
+        </div>
+        
+        <p><strong>Important:</strong> Please arrive 10-15 minutes early for check-in.</p>
+        <p><a href="${this.frontendUrl}/app/appointments/${appointment.id}" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">View Appointment</a></p>
+        
+        <p style="margin-top: 30px; color: #666;">If you need to reschedule, please do so at least 24 hours in advance.</p>
+        <p>Best regards,<br><strong>NMSL Healthcare Team</strong></p>
+      `,
+    });
+  }
+
+  // Send appointment confirmation to doctor when officer accepts booking
+  async sendAppointmentAcceptedToDoctor(appointment: any, doctorEmail: string) {
+    await this.send({
+      to: doctorEmail,
+      from: this.from,
+      subject: `New Appointment - ${appointment.patientName}`,
+      html: `
+        <h1>New Patient Appointment</h1>
+        <p>Dear Dr. ${appointment.doctorName},</p>
+        <p>A new appointment has been scheduled with you.</p>
+        
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h2 style="margin-top: 0;">Appointment Details</h2>
+          <p><strong>Patient:</strong> ${appointment.patientName}</p>
+          <p><strong>Date:</strong> ${new Date(appointment.appointmentDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <p><strong>Time:</strong> ${appointment.appointmentTime}</p>
+          <p><strong>Location:</strong> ${appointment.location}</p>
+          <p><strong>Reason for Visit:</strong> ${appointment.reason}</p>
+          ${appointment.patientEmail ? `<p><strong>Patient Email:</strong> ${appointment.patientEmail}</p>` : ''}
+        </div>
+        
+        <p><a href="${this.frontendUrl}/app/doctor/appointments/${appointment.id}" style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">View Details</a></p>
+        
+        <p style="margin-top: 30px;">Best regards,<br><strong>NMSL Healthcare System</strong></p>
+      `,
+    });
+  }
+
+  // Send appointment rejection to patient
+  async sendAppointmentRejectedToPatient(appointment: any, reason?: string) {
+    await this.send({
+      to: appointment.patientEmail,
+      from: this.from,
+      subject: `Appointment Update - ${appointment.doctorName}`,
+      html: `
+        <h1>Appointment Status Update</h1>
+        <p>Dear ${appointment.patientName},</p>
+        <p>We regret to inform you that your appointment request could not be confirmed at this time.</p>
+        
+        <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+          <p><strong>Original Appointment Details:</strong></p>
+          <p>Doctor: ${appointment.doctorName}</p>
+          <p>Date: ${new Date(appointment.appointmentDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <p>Time: ${appointment.appointmentTime}</p>
+          ${reason ? `<p style="margin-top: 15px;"><strong>Reason:</strong> ${reason}</p>` : ''}
+        </div>
+        
+        <p>We encourage you to:</p>
+        <ul>
+          <li>Select an alternative date/time</li>
+          <li>Choose a different doctor with similar specialty</li>
+          <li>Contact us for assistance: contact@nmsl.app</li>
+        </ul>
+        
+        <p><a href="${this.frontendUrl}/app/appointments/book" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Book New Appointment</a></p>
+        
+        <p style="margin-top: 30px;">We apologize for any inconvenience.</p>
+        <p>Best regards,<br><strong>NMSL Healthcare Team</strong></p>
+      `,
+    });
+  }
 }
