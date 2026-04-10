@@ -3,8 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User, UserRole } from '../../users/entities/user.entity';
+import { Doctor } from '../../doctors/entities/doctor.entity';
+import { DoctorAvailability } from '../../doctors/entities/doctor-availability.entity';
 import { Appointment, AppointmentStatus } from '../../appointments/entities/appointment.entity';
-import { CreateDoctorDto } from '../dto/create-doctor.dto';
+import { CreateDoctorDto } from '../../doctors/dto/create-doctor.dto';
 import { CreateAdminDto } from '../dto/create-admin.dto';
 import { ChangeAdminPasswordDto } from '../dto/change-admin-password.dto';
 import { UpdateUserEmailDto } from '../dto/update-user-email.dto';
@@ -20,6 +22,10 @@ export class AdminService {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(Doctor)
+    private readonly doctorsRepository: Repository<Doctor>,
+    @InjectRepository(DoctorAvailability)
+    private readonly doctorAvailabilityRepository: Repository<DoctorAvailability>,
     @InjectRepository(Appointment)
     private readonly appointmentsRepository: Repository<Appointment>,
     private readonly usersService: UsersService,
@@ -33,7 +39,7 @@ export class AdminService {
     const [totalUsers, totalDoctors, totalAppointments, pendingApprovals] =
       await Promise.all([
         this.usersRepository.count(),
-        this.usersRepository.count({ where: { role: UserRole.DOCTOR } }),
+        this.doctorsRepository.count(),
         this.appointmentsRepository.count(),
         this.appointmentsRepository.count({
           where: { status: AppointmentStatus.PENDING },
@@ -44,17 +50,39 @@ export class AdminService {
   }
 
   // ─── Doctors ─────────────────────────────────────────────────────────────
-  async createDoctor(dto: CreateDoctorDto): Promise<User> {
+  async createDoctor(dto: CreateDoctorDto): Promise<Doctor> {
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const doctor = await this.usersService.create({
+    
+    // Create doctor record
+    const doctor = this.doctorsRepository.create({
       ...dto,
       password: hashedPassword,
-      role: UserRole.DOCTOR,
+      isActive: true,
     });
-    await this.doctorsService.createDefaultAvailability(doctor.id);
-    try { await this.emailService.sendWelcomeEmail(doctor); } catch (_) {}
-    const { password, resetPasswordToken, resetPasswordExpires, ...safe } = doctor as any;
-    return safe;
+    
+    const savedDoctor = await this.doctorsRepository.save(doctor);
+    
+    // Create default availability (empty - unavailable by default)
+    const availability = this.doctorAvailabilityRepository.create({
+      doctor: savedDoctor,
+      days: [],
+      useUniformTime: true,
+      uniformTimeStart: null,
+      uniformTimeEnd: null,
+      customTimes: null,
+    });
+    
+    await this.doctorAvailabilityRepository.save(availability);
+    
+    try {
+      await this.emailService.sendWelcomeEmail({
+        email: savedDoctor.email,
+        name: savedDoctor.name,
+      } as any);
+    } catch (_) {}
+    
+    const { password, ...safe } = savedDoctor;
+    return safe as Doctor;
   }
 
   async getDoctors(query: {
@@ -63,7 +91,33 @@ export class AdminService {
     page?: number;
     limit?: number;
   }) {
-    return this.usersService.findDoctors(query);
+    const { specialty, location, page = 1, limit = 20 } = query;
+    
+    const queryBuilder = this.doctorsRepository
+      .createQueryBuilder('doctor')
+      .leftJoinAndSelect('doctor.availabilitySchedule', 'availability');
+    
+    if (specialty) {
+      queryBuilder.where('doctor.specialty = :specialty', { specialty });
+    }
+    
+    if (location) {
+      queryBuilder.andWhere('doctor.location = :location', { location });
+    }
+    
+    queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .orderBy('doctor.createdAt', 'DESC');
+    
+    const [doctors, total] = await queryBuilder.getManyAndCount();
+    
+    return {
+      doctors: doctors.map(({ password, ...safe }) => safe),
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   // ─── Admins ───────────────────────────────────────────────────────────────

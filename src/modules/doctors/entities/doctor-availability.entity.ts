@@ -7,47 +7,32 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
-
-export class BookedSlot {
-  date: string;
-  time: string;
-  appointmentId: string;
-}
-
-export class UnavailableSlot {
-  date: string;
-  time: string;
-  reason?: string;
-}
+import { Doctor } from './doctor.entity';
 
 @Entity('doctor_availability')
 export class DoctorAvailability {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
-  doctorId: string;
+  @OneToOne(() => Doctor, (doctor) => doctor.availabilitySchedule)
+  @JoinColumn()
+  doctor: Doctor;
 
-  @Column('simple-array')
-  availableDays: string[];
+  @Column('simple-array') // Store as comma-separated: monday,tuesday,wednesday
+  days: string[];
 
-  @Column('simple-array')
-  timeSlots: string[];
+  @Column()
+  useUniformTime: boolean;
 
-  @Column({ type: 'jsonb', default: [] })
-  bookedSlots: BookedSlot[];
+  @Column({ type: 'time', nullable: true })
+  uniformTimeStart: string; // Format: HH:mm
 
-  @Column({ type: 'jsonb', default: [] })
-  unavailableSlots: UnavailableSlot[];
+  @Column({ type: 'time', nullable: true })
+  uniformTimeEnd: string; // Format: HH:mm
 
-  @CreateDateColumn()
-  createdAt: Date;
+  @Column({ type: 'jsonb', nullable: true })
+  customTimes: Record<string, { start: string; end: string }>; // { monday: { start: '09:00', end: '17:00' } }
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  @OneToOne(() => User)
-  @JoinColumn({ name: 'doctorId' })
-  doctor: User;
 }

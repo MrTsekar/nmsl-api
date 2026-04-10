@@ -1,6 +1,8 @@
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { User, UserRole, MedicalSpecialty } from '../modules/users/entities/user.entity';
+import { User, UserRole } from '../modules/users/entities/user.entity';
+import { Doctor } from '../modules/doctors/entities/doctor.entity';
+import { DoctorAvailability } from '../modules/doctors/entities/doctor-availability.entity';
 import { BoardMember } from '../modules/board-members/entities/board-member.entity';
 import { Partner } from '../modules/partners/entities/partner.entity';
 import { ContactInfo } from '../modules/contact/entities/contact-info.entity';
@@ -59,71 +61,84 @@ export async function seedDatabase(dataSource: DataSource) {
   console.log('✅ Created appointment officers');
 
   // 2. Create Doctors
+  const doctorRepository = dataSource.getRepository(Doctor);
+  const doctorAvailabilityRepository = dataSource.getRepository(DoctorAvailability);
+  
   const doctors = [
     {
       name: 'Dr. Ken Wu',
       email: 'ken.wu@nmsl.app',
-      specialty: MedicalSpecialty.GENERAL_PRACTICE,
+      specialty: 'General Practice',
       qualifications: 'MBBS, FMCGP',
       location: 'Lagos',
       state: 'Lagos',
       phone: '+234 805 111 2233',
-      consultationFee: 15000,
     },
     {
       name: 'Dr. Sarah Chen',
       email: 'sarah.chen@nmsl.app',
-      specialty: MedicalSpecialty.CARDIOLOGY,
+      specialty: 'Cardiology',
       qualifications: 'MBBS, MD (Cardiology), FACC',
       location: 'Abuja',
       state: 'FCT',
       phone: '+234 806 222 3344',
-      consultationFee: 25000,
     },
     {
       name: 'Dr. Amina Yusuf',
       email: 'amina.yusuf@nmsl.app',
-      specialty: MedicalSpecialty.PEDIATRICS,
+      specialty: 'Pediatrics',
       qualifications: 'MBBS, FWACP (Pediatrics)',
       location: 'Kaduna',
       state: 'Kaduna',
       phone: '+234 807 333 4455',
-      consultationFee: 20000,
     },
     {
       name: 'Dr. Chidi Okafor',
       email: 'chidi.okafor@nmsl.app',
-      specialty: MedicalSpecialty.ORTHOPEDICS,
+      specialty: 'Orthopedics',
       qualifications: 'MBBS, FWACS (Orthopedics)',
       location: 'Port Harcourt',
       state: 'Rivers',
       phone: '+234 808 444 5566',
-      consultationFee: 22000,
     },
     {
       name: 'Dr. Fatima Abubakar',
       email: 'fatima.abubakar@nmsl.app',
-      specialty: MedicalSpecialty.GYNECOLOGY,
+      specialty: 'Gynecology',
       qualifications: 'MBBS, FWACS (Obstetrics & Gynecology)',
       location: 'Benin',
       state: 'Edo',
       phone: '+234 809 555 6677',
-      consultationFee: 23000,
     },
   ];
 
   const doctorPassword = await bcrypt.hash('Doctor@123', 10);
-  const doctorEntities = doctors.map(doc =>
-    userRepository.create({
+  
+  const savedDoctors: Doctor[] = [];
+  for (const doc of doctors) {
+    const doctor = doctorRepository.create({
       ...doc,
       password: doctorPassword,
-      role: UserRole.DOCTOR,
       isActive: true,
-      gender: doc.name.includes('Dr. Sarah') || doc.name.includes('Amina') || doc.name.includes('Fatima') ? 'female' : 'male',
-    })
-  );
-  await userRepository.save(doctorEntities);
-  console.log('✅ Created doctors');
+    });
+    
+    const savedDoctor = await doctorRepository.save(doctor);
+    savedDoctors.push(savedDoctor);
+    
+    // Create default availability (available Monday-Friday, 9-5)
+    const availability = doctorAvailabilityRepository.create({
+      doctor: savedDoctor,
+      days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+      useUniformTime: true,
+      uniformTimeStart: '09:00',
+      uniformTimeEnd: '17:00',
+      customTimes: null,
+    });
+    
+    await doctorAvailabilityRepository.save(availability);
+  }
+  
+  console.log('✅ Created doctors with availability schedules');
 
   // 3. Create Sample Patients
   const patientPassword = await bcrypt.hash('Patient@123', 10);
@@ -332,36 +347,36 @@ export async function seedDatabase(dataSource: DataSource) {
   const appointments = [
     {
       patientId: patientEntities[0].id,
-      doctorId: doctorEntities[0].id,
+      doctorId: savedDoctors[0].id,
       patientName: patientEntities[0].name,
       patientEmail: patientEntities[0].email,
       patientPhone: patientEntities[0].phone,
-      doctorName: doctorEntities[0].name,
+      doctorName: savedDoctors[0].name,
       appointmentDate: tomorrowStr,
       appointmentTime: '09:00',
       status: AppointmentStatus.PENDING,
       reason: 'Routine check-up',
-      specialty: doctorEntities[0].specialty,
-      location: doctorEntities[0].location,
-      fee: doctorEntities[0].consultationFee,
+      specialty: savedDoctors[0].specialty,
+      location: savedDoctors[0].location,
+      fee: 0,
       visitType: 'Physical',
       isUrgent: false,
       isConflicted: false,
     },
     {
       patientId: patientEntities[1].id,
-      doctorId: doctorEntities[1].id,
+      doctorId: savedDoctors[1].id,
       patientName: patientEntities[1].name,
       patientEmail: patientEntities[1].email,
       patientPhone: patientEntities[1].phone,
-      doctorName: doctorEntities[1].name,
+      doctorName: savedDoctors[1].name,
       appointmentDate: tomorrowStr,
       appointmentTime: '10:00',
       status: AppointmentStatus.CONFIRMED,
       reason: 'Cardiac consultation',
-      specialty: doctorEntities[1].specialty,
-      location: doctorEntities[1].location,
-      fee: doctorEntities[1].consultationFee,
+      specialty: savedDoctors[1].specialty,
+      location: savedDoctors[1].location,
+      fee: 0,
       visitType: 'Telemedicine',
       isUrgent: false,
       isConflicted: false,

@@ -8,6 +8,7 @@ import { AppointmentLockService } from './services/appointment-lock.service';
 import { UsersModule } from '../users/users.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ChatModule } from '../chat/chat.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ChatModule } from '../chat/chat.module';
     UsersModule,
     NotificationsModule,
     ChatModule,
+    AuditModule,
   ],
   controllers: [AppointmentsController],
   providers: [AppointmentsService, AppointmentLockService],

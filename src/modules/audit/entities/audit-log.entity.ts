@@ -11,6 +11,7 @@ export enum AuditAction {
   REJECTED = 'rejected',
   RESCHEDULED = 'rescheduled',
   COMPLETED = 'completed',
+  ADMIN_OVERRIDE = 'admin_override',
 }
 
 @Entity('audit_logs')

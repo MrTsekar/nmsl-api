@@ -18,7 +18,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { AdminService } from '../services/admin.service';
-import { CreateDoctorDto } from '../dto/create-doctor.dto';
+import { CreateDoctorDto } from '../../doctors/dto/create-doctor.dto';
 import { CreateAdminDto } from '../dto/create-admin.dto';
 import { ChangeAdminPasswordDto } from '../dto/change-admin-password.dto';
 import { UpdateUserEmailDto } from '../dto/update-user-email.dto';
@@ -27,7 +27,8 @@ import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
-import { User, UserRole, MedicalSpecialty } from '../../users/entities/user.entity';
+import { User, UserRole } from '../../users/entities/user.entity';
+import { DoctorSpecialty } from '../../doctors/dto/create-doctor.dto';
 
 @ApiTags('Admin')
 @ApiBearerAuth('JWT')
@@ -48,7 +49,7 @@ export class AdminController {
   @Get('doctors')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all doctors' })
-  @ApiQuery({ name: 'specialty', required: false, enum: MedicalSpecialty })
+  @ApiQuery({ name: 'specialty', required: false, enum: DoctorSpecialty })
   @ApiQuery({ name: 'location', required: false })
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })

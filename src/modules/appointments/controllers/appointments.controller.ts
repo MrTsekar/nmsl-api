@@ -120,7 +120,7 @@ export class AppointmentsController {
     );
   }
 
-  @Post(':id/lock')
+  @Patch(':id/lock')
   @Roles(UserRole.ADMIN, UserRole.APPOINTMENT_OFFICER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -138,6 +138,7 @@ export class AppointmentsController {
       id,
       dto.officerEmail || user.email,
       dto.isAdmin || isAdmin,
+      user.name, // Pass admin name for audit logging
     );
 
     // Update appointment entity with lock info
@@ -157,7 +158,7 @@ export class AppointmentsController {
     };
   }
 
-  @Post(':id/unlock')
+  @Patch(':id/unlock')
   @Roles(UserRole.ADMIN, UserRole.APPOINTMENT_OFFICER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

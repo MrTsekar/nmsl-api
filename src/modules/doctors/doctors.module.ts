@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Doctor } from './entities/doctor.entity';
 import { DoctorAvailability } from './entities/doctor-availability.entity';
 import { Appointment } from '../appointments/entities/appointment.entity';
 import { DoctorsController } from './controllers/doctors.controller';
@@ -10,7 +11,7 @@ import { ChatModule } from '../chat/chat.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([DoctorAvailability, Appointment]),
+    TypeOrmModule.forFeature([Doctor, DoctorAvailability, Appointment]),
     UsersModule,
     NotificationsModule,
     ChatModule,

@@ -9,6 +9,7 @@ import {
   Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { Doctor } from '../../doctors/entities/doctor.entity';
 
 export enum AppointmentStatus {
   PENDING = 'pending',
@@ -94,7 +95,6 @@ export class Appointment {
   @Column({ type: 'text', nullable: true })
   rescheduleReason: string;
 
-  @Column({ nullable: true })
   // Additional fields from spec
   @Column({ nullable: true })
   patientEmail: string;
@@ -115,6 +115,7 @@ export class Appointment {
   @Column({ type: 'timestamp', nullable: true })
   lockedAt: Date;
 
+  @Column({ nullable: true })
   originalAppointmentId: string;
 
   @CreateDateColumn()
@@ -127,7 +128,7 @@ export class Appointment {
   @JoinColumn({ name: 'patientId' })
   patient: User;
 
-  @ManyToOne(() => User, { eager: false })
+  @ManyToOne(() => Doctor, { eager: false, nullable: true })
   @JoinColumn({ name: 'doctorId' })
-  doctor: User;
+  doctor: Doctor;
 }
