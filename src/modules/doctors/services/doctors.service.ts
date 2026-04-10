@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -30,15 +31,15 @@ export class DoctorsService {
     private readonly chatGateway: ChatGateway,
   ) {}
 
-  async getAvailability(doctorId: string): Promise<DoctorAvailability> {
+  async getAvailability(doctorId: string): Promise<any> {
     const availability = await this.availabilityRepository.findOne({
       where: { doctorId },
     });
     if (!availability) throw new NotFoundException('Availability not found for this doctor');
-    return availability;
+    return this.formatAvailabilityResponse(availability);
   }
 
-  async getAvailabilityByName(doctorName: string): Promise<DoctorAvailability> {
+  async getAvailabilityByName(doctorName: string): Promise<any> {
     const decodedName = decodeURIComponent(doctorName);
     const doctor = await this.usersService.findAll({
       role: UserRole.DOCTOR,
@@ -104,6 +105,11 @@ export class DoctorsService {
       throw new ForbiddenException('Access denied');
     }
 
+    // Validate doctorId if provided in body
+    if (dto.doctorId && dto.doctorId !== doctorId) {
+      throw new BadRequestException('Doctor ID mismatch');
+    }
+
     let availability = await this.availabilityRepository.findOne({
       where: { doctorId },
     });
@@ -111,6 +117,12 @@ export class DoctorsService {
     if (!availability) {
       availability = this.availabilityRepository.create({
         doctorId,
+        days: [],
+        useUniformTime: false,
+        uniformTimeStart: null,
+        uniformTimeEnd: null,
+        customTimes: null,
+        // Legacy fields
         availableDays: [],
         timeSlots: [],
         bookedSlots: [],
@@ -118,10 +130,36 @@ export class DoctorsService {
       });
     }
 
-    if (dto.availableDays !== undefined) availability.availableDays = dto.availableDays;
-    if (dto.timeSlots !== undefined) availability.timeSlots = dto.timeSlots;
+    // Update with new spec-compliant fields
+    availability.days = dto.days;
+    availability.useUniformTime = dto.useUniformTime;
 
-    return this.availabilityRepository.save(availability);
+    if (dto.useUniformTime && dto.uniformTime) {
+      availability.uniformTimeStart = dto.uniformTime.start;
+      availability.uniformTimeEnd = dto.uniformTime.end;
+      availability.customTimes = null;
+    } else if (!dto.useUniformTime && dto.customTimes) {
+      availability.uniformTimeStart = null;
+      availability.uniformTimeEnd = null;
+      availability.customTimes = dto.customTimes;
+    }
+
+    const saved = await this.availabilityRepository.save(availability);
+
+    // Return formatted response
+    return this.formatAvailabilityResponse(saved);
+  }
+
+  private formatAvailabilityResponse(availability: DoctorAvailability): any {
+    return {
+      doctorId: availability.doctorId,
+      days: availability.days || [],
+      useUniformTime: availability.useUniformTime,
+      uniformTime: availability.useUniformTime && availability.uniformTimeStart && availability.uniformTimeEnd
+        ? { start: availability.uniformTimeStart, end: availability.uniformTimeEnd }
+        : null,
+      customTimes: !availability.useUniformTime ? availability.customTimes : null,
+    };
   }
 
   async markUnavailable(

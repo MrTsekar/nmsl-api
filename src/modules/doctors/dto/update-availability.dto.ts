@@ -6,6 +6,7 @@ import {
   ValidateNested,
   ValidateIf,
   IsObject,
+  IsUUID,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
@@ -21,6 +22,13 @@ export class TimeSlot {
 }
 
 export class UpdateAvailabilityDto {
+  @ApiPropertyOptional({
+    description: 'Doctor ID (optional, for validation)',
+  })
+  @IsOptional()
+  @IsUUID()
+  doctorId?: string;
+
   @ApiProperty({
     example: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
     description: 'Days of the week when doctor is available',
@@ -37,22 +45,14 @@ export class UpdateAvailabilityDto {
   useUniformTime: boolean;
 
   @ApiPropertyOptional({
-    example: '09:00',
-    description: 'Uniform start time (HH:mm format)',
+    example: { start: '09:00', end: '17:00' },
+    description: 'Uniform time slot for all days (when useUniformTime is true)',
   })
   @ValidateIf((o) => o.useUniformTime === true)
-  @IsString()
+  @ValidateNested()
+  @Type(() => TimeSlot)
   @IsOptional()
-  uniformTimeStart?: string;
-
-  @ApiPropertyOptional({
-    example: '17:00',
-    description: 'Uniform end time (HH:mm format)',
-  })
-  @ValidateIf((o) => o.useUniformTime === true)
-  @IsString()
-  @IsOptional()
-  uniformTimeEnd?: string;
+  uniformTime?: TimeSlot;
 
   @ApiPropertyOptional({
     example: {

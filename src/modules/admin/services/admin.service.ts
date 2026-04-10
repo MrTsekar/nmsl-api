@@ -114,7 +114,25 @@ export class AdminService {
     const [doctors, total] = await queryBuilder.getManyAndCount();
     
     return {
-      doctors: doctors.map(({ password, ...safe }) => safe),
+      doctors: doctors.map((doctor) => {
+        const { password, ...safeDoctor } = doctor as any;
+        
+        // Format availabilitySchedule to match frontend expectations
+        if (safeDoctor.availabilitySchedule) {
+          const avail = safeDoctor.availabilitySchedule;
+          safeDoctor.availabilitySchedule = {
+            doctorId: avail.doctorId,
+            days: avail.days || [],
+            useUniformTime: avail.useUniformTime,
+            uniformTime: avail.useUniformTime && avail.uniformTimeStart && avail.uniformTimeEnd
+              ? { start: avail.uniformTimeStart, end: avail.uniformTimeEnd }
+              : null,
+            customTimes: !avail.useUniformTime ? avail.customTimes : null,
+          };
+        }
+        
+        return safeDoctor;
+      }),
       total,
       page,
       totalPages: Math.ceil(total / limit),
