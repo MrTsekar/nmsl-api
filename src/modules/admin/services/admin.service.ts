@@ -227,7 +227,11 @@ export class AdminService {
       throw new Error('Password update failed verification');
     }
     
-    return { success: true, message: 'Password updated successfully' };
+    return { 
+      success: true, 
+      message: 'Password updated successfully. User should login with new password.',
+      userEmail: user.email,
+    };
   }
 
   async deleteAdmin(id: string) {

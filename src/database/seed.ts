@@ -13,52 +13,74 @@ import { Appointment, AppointmentStatus } from '../modules/appointments/entities
 export async function seedDatabase(dataSource: DataSource) {
   console.log('🌱 Starting database seeding...');
 
-  // 1. Create Admin Users
+  // 1. Create Admin Users (only if they don't exist)
   const userRepository = dataSource.getRepository(User);
-  
   const adminPassword = await bcrypt.hash('Admin@123', 10);
-  const admin = userRepository.create({
-    name: 'Emeka Nwosu',
-    email: 'admin@nmsl.app',
-    password: adminPassword,
-    role: UserRole.ADMIN,
-    location: 'Abuja',
-    state: 'FCT',
-    address: 'NMSL Headquarters, Central Business District, Abuja',
-    phone: '+234 801 234 5678',
-    gender: 'male',
-    isActive: true,
+  
+  // Check if admin already exists
+  const existingAdmin = await userRepository.findOne({ 
+    where: { email: 'admin@nmsl.app' } 
   });
-  await userRepository.save(admin);
-  console.log('✅ Created admin user');
+  
+  if (!existingAdmin) {
+    const admin = userRepository.create({
+      name: 'Emeka Nwosu',
+      email: 'admin@nmsl.app',
+      password: adminPassword,
+      role: UserRole.ADMIN,
+      location: 'Abuja',
+      state: 'FCT',
+      address: 'NMSL Headquarters, Central Business District, Abuja',
+      phone: '+234 801 234 5678',
+      gender: 'male',
+      isActive: true,
+    });
+    await userRepository.save(admin);
+    console.log('✅ Created admin user');
+  } else {
+    console.log('⏭️  Admin user already exists, skipping...');
+  }
 
-  // Create Appointment Officers
-  const officer1 = userRepository.create({
-    name: 'Sarah Johnson',
-    email: 'officer1@nmsl.app',
-    password: adminPassword,
-    role: UserRole.APPOINTMENT_OFFICER,
-    location: 'Lagos',
-    state: 'Lagos',
-    phone: '+234 802 345 6789',
-    gender: 'female',
-    isActive: true,
+  // Create Appointment Officers (only if they don't exist)
+  const existingOfficer1 = await userRepository.findOne({ 
+    where: { email: 'officer1@nmsl.app' } 
   });
+  
+  if (!existingOfficer1) {
+    const officer1 = userRepository.create({
+      name: 'Sarah Johnson',
+      email: 'officer1@nmsl.app',
+      password: adminPassword,
+      role: UserRole.APPOINTMENT_OFFICER,
+      location: 'Lagos',
+      state: 'Lagos',
+      phone: '+234 802 345 6789',
+      gender: 'female',
+      isActive: true,
+    });
+    await userRepository.save(officer1);
+  }
 
-  const officer2 = userRepository.create({
-    name: 'Michael Chen',
-    email: 'officer2@nmsl.app',
-    password: adminPassword,
-    role: UserRole.APPOINTMENT_OFFICER,
-    location: 'Abuja',
-    state: 'FCT',
-    phone: '+234 803 456 7890',
-    gender: 'male',
-    isActive: true,
+  const existingOfficer2 = await userRepository.findOne({ 
+    where: { email: 'officer2@nmsl.app' } 
   });
-
-  await userRepository.save([officer1, officer2]);
-  console.log('✅ Created appointment officers');
+  
+  if (!existingOfficer2) {
+    const officer2 = userRepository.create({
+      name: 'Michael Chen',
+      email: 'officer2@nmsl.app',
+      password: adminPassword,
+      role: UserRole.APPOINTMENT_OFFICER,
+      location: 'Abuja',
+      state: 'FCT',
+      phone: '+234 803 456 7890',
+      gender: 'male',
+      isActive: true,
+    });
+    await userRepository.save(officer2);
+  }
+  
+  console.log('✅ Checked/created appointment officers');
 
   // 2. Create Doctors
   const doctorRepository = dataSource.getRepository(Doctor);

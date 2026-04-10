@@ -134,7 +134,11 @@ export class AuthService {
     this.logger.log(`✅ Password changed successfully for user: ${userId}`);
     this.logger.debug(`Saved password (first 10 chars): ${updatedUser.password.substring(0, 10)}...`);
     
-    return { success: true, message: 'Password changed successfully' };
+    return { 
+      success: true, 
+      message: 'Password changed successfully. Please login with your new password.',
+      requiresReauth: true, // Flag to frontend that they should logout
+    };
   }
 
   private generateToken(userId: string, role: string): string {
