@@ -73,7 +73,8 @@ export class AuthService {
     try {
       await this.emailService.sendPasswordReset(user.email, token);
     } catch (e) {
-      console.error('Failed to send password reset email:', e.message);
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      console.error('Failed to send password reset email:', errorMessage);
     }
 
     const response: any = { message: 'Password reset link sent to your email' };
