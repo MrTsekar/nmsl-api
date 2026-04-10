@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -20,6 +20,8 @@ import { AuditAction } from '../../audit/entities/audit-log.entity';
 
 @Injectable()
 export class AdminService {
+  private readonly logger = new Logger(AdminService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
@@ -194,10 +196,10 @@ export class AdminService {
   }
 
   async changeAdminPassword(id: string, dto: ChangeAdminPasswordDto) {
-    await this.usersService.findById(id); // ensures existence
-    const hashed = await bcrypt.hash(dto.newPassword, 10);
-    await this.usersService.updateRaw(id, { password: hashed } as any);
-    return { success: true, message: 'Password updated successfully' };
+    this.logger.log(`🔄 Admin password change for user: ${id}`);\n    await this.usersService.findById(id); // ensures existence
+    this.logger.debug(`New password length: ${dto.newPassword?.length}`);\n    const hashed = await bcrypt.hash(dto.newPassword, 10);
+    this.logger.debug(`Hashed password (first 10 chars): ${hashed.substring(0, 10)}...`);\n    await this.usersService.updateRaw(id, { password: hashed } as any);
+    this.logger.log(`✅ Admin password changed successfully for user: ${id}`);\n    return { success: true, message: 'Password updated successfully' };
   }
 
   async deleteAdmin(id: string) {

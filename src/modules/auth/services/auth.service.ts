@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -18,6 +19,8 @@ import { EmailService } from '../../notifications/services/email.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
@@ -25,13 +28,22 @@ export class AuthService {
   ) {}
 
   async signIn(dto: SignInDto) {
+    this.logger.log(`🔐 Sign-in attempt for: ${dto.email}`);
     const user = await this.usersService.findByEmail(dto.email);
     if (!user) {
+      this.logger.warn(`❌ User not found: ${dto.email}`);
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    this.logger.debug(`User found: ${user.id}, Active: ${user.isActive}`);
+    this.logger.debug(`Password in DB (first 10 chars): ${user.password?.substring(0, 10)}...`);
+    this.logger.debug(`Password received length: ${dto.password?.length}`);
+
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+    this.logger.log(`Password validation result: ${isPasswordValid}`);
+    
     if (!isPasswordValid) {
+      this.logger.warn(`❌ Invalid password for: ${dto.email}`);
       throw new UnauthorizedException('Invalid email or password');
     }
 
@@ -99,13 +111,18 @@ export class AuthService {
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
+    this.logger.log(`🔄 Password change request for user: ${userId}`);
     const user = await this.usersService.findById(userId);
     const isValid = await bcrypt.compare(dto.currentPassword, user.password);
     if (!isValid) {
+      this.logger.warn(`❌ Current password incorrect for user: ${userId}`);
       throw new BadRequestException('Current password is incorrect');
     }
+    this.logger.debug(`New password length: ${dto.newPassword?.length}`);
     const hashed = await bcrypt.hash(dto.newPassword, 10);
+    this.logger.debug(`Hashed password (first 10 chars): ${hashed.substring(0, 10)}...`);
     await this.usersService.updateRaw(userId, { password: hashed } as any);
+    this.logger.log(`✅ Password changed successfully for user: ${userId}`);
     return { success: true, message: 'Password changed successfully' };
   }
 
