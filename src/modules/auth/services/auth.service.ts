@@ -52,8 +52,16 @@ export class AuthService {
     }
 
     const token = this.generateToken(user.id, user.role);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+    
     const { password, resetPasswordToken, resetPasswordExpires, ...userWithoutPassword } = user as any;
-    return { token, user: userWithoutPassword };
+    
+    this.logger.log(`✅ Sign-in successful for: ${dto.email}`);
+    return { 
+      token, 
+      user: userWithoutPassword,
+      expiresAt: expiresAt.toISOString(),
+    };
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
