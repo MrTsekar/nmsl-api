@@ -4,57 +4,83 @@ export class UpdateTestimonialSchema1775900000000 implements MigrationInterface 
     name = 'UpdateTestimonialSchema1775900000000'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // Update enum values for serviceType
+        // Step 1: Add temporary columns for migration
         await queryRunner.query(`
-            DO $$ 
-            BEGIN
-                IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'testimonials_servicetype_enum') THEN
-                    DROP TYPE "testimonials_servicetype_enum" CASCADE;
-                END IF;
-            END $$;
-        `);
-        
-        await queryRunner.query(`
-            CREATE TYPE "testimonials_servicetype_enum" AS ENUM('Physical Appointment', 'Telemedicine')
+            ALTER TABLE "testimonials" 
+            ADD COLUMN IF NOT EXISTS "patientCategory_temp" TEXT,
+            ADD COLUMN IF NOT EXISTS "serviceType_temp" TEXT
         `);
 
-        // Update enum values for category/patientCategory
+        // Step 2: Copy data from old columns to temp columns
         await queryRunner.query(`
-            DO $$ 
-            BEGIN
-                IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'testimonials_category_enum') THEN
-                    DROP TYPE "testimonials_category_enum" CASCADE;
-                END IF;
-            END $$;
+            UPDATE "testimonials" 
+            SET "patientCategory_temp" = "category"::text,
+                "serviceType_temp" = "serviceType"::text
         `);
 
+        // Step 3: Drop old columns and enums
+        await queryRunner.query(`
+            ALTER TABLE "testimonials" 
+            DROP COLUMN "category",
+            DROP COLUMN "serviceType"
+        `);
+
+        await queryRunner.query(`
+            DROP TYPE IF EXISTS "testimonials_category_enum" CASCADE
+        `);
+
+        await queryRunner.query(`
+            DROP TYPE IF EXISTS "testimonials_servicetype_enum" CASCADE
+        `);
+
+        // Step 4: Create new enums
         await queryRunner.query(`
             CREATE TYPE "testimonials_patientcategory_enum" AS ENUM('Staff', 'Retiree', 'Dependent')
         `);
 
-        // Rename column from category to patientCategory
         await queryRunner.query(`
-            ALTER TABLE "testimonials" 
-            RENAME COLUMN "category" TO "patientCategory"
+            CREATE TYPE "testimonials_servicetype_enum" AS ENUM('Physical Appointment', 'Telemedicine')
         `);
 
-        // Update the column type
+        // Step 5: Add new columns with proper types
         await queryRunner.query(`
             ALTER TABLE "testimonials" 
-            ALTER COLUMN "patientCategory" TYPE "testimonials_patientcategory_enum" 
-            USING ("patientCategory"::text::"testimonials_patientcategory_enum")
+            ADD COLUMN "patientCategory" "testimonials_patientcategory_enum",
+            ADD COLUMN "serviceType" "testimonials_servicetype_enum"
         `);
 
+        // Step 6: Migrate data with transformation
         await queryRunner.query(`
-            ALTER TABLE "testimonials" 
-            ALTER COLUMN "serviceType" TYPE "testimonials_servicetype_enum" 
-            USING (
+            UPDATE "testimonials" 
+            SET "patientCategory" = (
                 CASE 
-                    WHEN "serviceType"::text = 'physical_appointment' THEN 'Physical Appointment'::"testimonials_servicetype_enum"
-                    WHEN "serviceType"::text = 'telemedicine' THEN 'Telemedicine'::"testimonials_servicetype_enum"
+                    WHEN "patientCategory_temp" = 'staff' THEN 'Staff'::"testimonials_patientcategory_enum"
+                    WHEN "patientCategory_temp" = 'dependent' THEN 'Dependent'::"testimonials_patientcategory_enum"
+                    WHEN "patientCategory_temp" = 'patient' THEN 'Dependent'::"testimonials_patientcategory_enum"
+                    ELSE 'Dependent'::"testimonials_patientcategory_enum"
+                END
+            ),
+            "serviceType" = (
+                CASE 
+                    WHEN "serviceType_temp" = 'physical_appointment' THEN 'Physical Appointment'::"testimonials_servicetype_enum"
+                    WHEN "serviceType_temp" = 'telemedicine' THEN 'Telemedicine'::"testimonials_servicetype_enum"
                     ELSE 'Physical Appointment'::"testimonials_servicetype_enum"
                 END
             )
+        `);
+
+        // Step 7: Make columns non-nullable
+        await queryRunner.query(`
+            ALTER TABLE "testimonials" 
+            ALTER COLUMN "patientCategory" SET NOT NULL,
+            ALTER COLUMN "serviceType" SET NOT NULL
+        `);
+
+        // Step 8: Drop temporary columns
+        await queryRunner.query(`
+            ALTER TABLE "testimonials" 
+            DROP COLUMN "patientCategory_temp",
+            DROP COLUMN "serviceType_temp"
         `);
     }
 
@@ -86,13 +112,26 @@ export class UpdateTestimonialSchema1775900000000 implements MigrationInterface 
         await queryRunner.query(`
             ALTER TABLE "testimonials" 
             ALTER COLUMN "category" TYPE "testimonials_category_enum" 
-            USING ("category"::text::"testimonials_category_enum")
+            USING (
+                CASE 
+                    WHEN "category"::text = 'Staff' THEN 'staff'::"testimonials_category_enum"
+                    WHEN "category"::text = 'Dependent' THEN 'dependent'::"testimonials_category_enum"
+                    WHEN "category"::text = 'Retiree' THEN 'patient'::"testimonials_category_enum"
+                    ELSE 'patient'::"testimonials_category_enum"
+                END
+            )
         `);
 
         await queryRunner.query(`
             ALTER TABLE "testimonials" 
             ALTER COLUMN "serviceType" TYPE "testimonials_servicetype_enum" 
-            USING ("serviceType"::text::"testimonials_servicetype_enum")
+            USING (
+                CASE 
+                    WHEN "serviceType"::text = 'Physical Appointment' THEN 'physical_appointment'::"testimonials_servicetype_enum"
+                    WHEN "serviceType"::text = 'Telemedicine' THEN 'telemedicine'::"testimonials_servicetype_enum"
+                    ELSE 'physical_appointment'::"testimonials_servicetype_enum"
+                END
+            )
         `);
     }
 }

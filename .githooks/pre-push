@@ -1,0 +1,70 @@
+#!/bin/bash
+
+echo ""
+echo "🔍 Pre-push checks starting..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Store current branch
+CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
+echo "📍 Current branch: $CURRENT_BRANCH"
+
+# Stash any uncommitted changes
+echo ""
+echo "💾 Stashing uncommitted changes (if any)..."
+git stash push -m "pre-push-stash-$(date +%s)" --include-untracked
+STASHED=$?
+
+# Fetch latest from origin
+echo ""
+echo "📥 Fetching latest from origin..."
+git fetch origin
+
+# Pull latest master
+echo ""
+echo "🔄 Pulling latest from origin/master..."
+git pull origin master --rebase
+PULL_RESULT=$?
+
+if [ $PULL_RESULT -ne 0 ]; then
+    echo ""
+    echo "❌ Failed to pull from origin/master"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    # Restore stashed changes if any
+    if [ $STASHED -eq 0 ]; then
+        echo "♻️  Restoring stashed changes..."
+        git stash pop
+    fi
+    
+    exit 1
+fi
+
+# Build the project
+echo ""
+echo "🔨 Building project..."
+npm run build
+
+BUILD_RESULT=$?
+
+# Restore stashed changes if any
+if [ $STASHED -eq 0 ]; then
+    echo ""
+    echo "♻️  Restoring stashed changes..."
+    git stash pop
+fi
+
+# Check build result
+if [ $BUILD_RESULT -ne 0 ]; then
+    echo ""
+    echo "❌ Build failed! Push aborted."
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    exit 1
+fi
+
+echo ""
+echo "✅ All pre-push checks passed!"
+echo "🚀 Proceeding with push..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+exit 0
