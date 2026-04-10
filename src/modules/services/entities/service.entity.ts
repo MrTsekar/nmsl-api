@@ -44,13 +44,13 @@ export class Service {
   @Column({ type: 'text' })
   shortDescription: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   fullDescription: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   bannerImageUrl: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   iconImageUrl: string;
 
   @Column({ type: 'jsonb', default: [] })
