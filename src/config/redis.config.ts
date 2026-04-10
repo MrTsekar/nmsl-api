@@ -11,4 +11,6 @@ export const redisConfig = (
   password: configService.get<string>('REDIS_PASSWORD'),
   ttl: configService.get<number>('REDIS_TTL', 1800), // 30 minutes default
   max: 100, // Maximum number of items in cache
+  // Azure Cache for Redis requires TLS/SSL
+  tls: configService.get<string>('REDIS_TLS') === 'true' ? {} : undefined,
 });

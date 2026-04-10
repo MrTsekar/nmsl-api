@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as sgMail from '@sendgrid/mail';
+import { EmailClient } from '@azure/communication-email';
 
 @Injectable()
 export class EmailService {
@@ -8,35 +8,57 @@ export class EmailService {
   private readonly from: string;
   private readonly frontendUrl: string;
   private readonly enabled: boolean;
+  private readonly emailClient: EmailClient;
+  private readonly provider: 'azure' | 'mock';
 
   constructor(private configService: ConfigService) {
-    const apiKey = this.configService.get<string>('SENDGRID_API_KEY');
-    this.from = this.configService.get<string>('EMAIL_FROM') || 'noreply@nmsla.com';
+    const azureConnectionString = this.configService.get<string>('AZURE_COMMUNICATION_CONNECTION_STRING');
+    this.from = this.configService.get<string>('EMAIL_FROM') || 'noreply@nmsl.app';
     this.frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
-    this.enabled = !!apiKey && !apiKey.startsWith('your_');
+    
+    // Use Azure Communication Services Email
+    this.enabled = !!azureConnectionString && !azureConnectionString.startsWith('your_');
+    
     if (this.enabled) {
-      sgMail.setApiKey(apiKey);
+      this.emailClient = new EmailClient(azureConnectionString);
+      this.provider = 'azure';
+      this.logger.log('✅ Azure Communication Services Email initialized');
     } else {
-      this.logger.warn('SendGrid API key not configured. Emails will be logged only.');
+      this.provider = 'mock';
+      this.logger.warn('⚠️  Azure Communication Services not configured. Emails will be logged only.');
     }
   }
 
-  private async send(msg: any) {
+  private async send(msg: { to: string; subject: string; html: string }) {
     if (!this.enabled) {
       this.logger.log(`[EMAIL MOCK] To: ${msg.to} | Subject: ${msg.subject}`);
       return;
     }
+    
     try {
-      await sgMail.send(msg);
+      const message = {
+        senderAddress: this.from,
+        content: {
+          subject: msg.subject,
+          html: msg.html,
+        },
+        recipients: {
+          to: [{ address: msg.to }],
+        },
+      };
+
+      const poller = await this.emailClient.beginSend(message);
+      await poller.pollUntilDone();
+      this.logger.log(`✅ Email sent to ${msg.to}: ${msg.subject}`);
     } catch (e) {
-      this.logger.error(`Failed to send email: ${e.message}`);
+      this.logger.error(`❌ Failed to send email: ${e.message}`);
     }
   }
 
   async sendWelcomeEmail(user: any) {
     await this.send({
       to: user.email,
-      from: this.from,
+
       subject: 'Welcome to NMSL Healthcare!',
       html: `
         <h1>Welcome ${user.name}!</h1>
@@ -52,7 +74,7 @@ export class EmailService {
   async sendAppointmentConfirmed(appointment: any) {
     await this.send({
       to: appointment.patient?.email,
-      from: this.from,
+
       subject: `Appointment Confirmed with ${appointment.doctorName}`,
       html: `
         <h1>Appointment Confirmed!</h1>
@@ -73,7 +95,7 @@ export class EmailService {
   async sendAppointmentConflict(appointment: any) {
     await this.send({
       to: appointment.patient?.email,
-      from: this.from,
+
       subject: 'Action Required: Rebook Your Appointment',
       html: `
         <h1>Appointment Conflict</h1>
@@ -90,7 +112,7 @@ export class EmailService {
     const resetLink = `${this.frontendUrl}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
     await this.send({
       to: email,
-      from: this.from,
+
       subject: 'Reset Your Password',
       html: `
         <h1>Reset Your Password</h1>
@@ -105,7 +127,7 @@ export class EmailService {
   async sendNewPrescription(appointment: any) {
     await this.send({
       to: appointment.patient?.email,
-      from: this.from,
+
       subject: 'New Prescription Available',
       html: `
         <h1>New Prescription</h1>
@@ -119,7 +141,7 @@ export class EmailService {
   async sendResultUploaded(patient: any, testName: string) {
     await this.send({
       to: patient.email,
-      from: this.from,
+
       subject: 'New Medical Result Available',
       html: `
         <h1>Medical Result Ready</h1>
@@ -134,7 +156,7 @@ export class EmailService {
   async sendAppointmentAcceptedToPatient(appointment: any) {
     await this.send({
       to: appointment.patientEmail,
-      from: this.from,
+
       subject: `Appointment Confirmed - ${appointment.doctorName}`,
       html: `
         <h1>🎉 Your Appointment is Confirmed!</h1>
@@ -164,7 +186,7 @@ export class EmailService {
   async sendAppointmentAcceptedToDoctor(appointment: any, doctorEmail: string) {
     await this.send({
       to: doctorEmail,
-      from: this.from,
+
       subject: `New Appointment - ${appointment.patientName}`,
       html: `
         <h1>New Patient Appointment</h1>
@@ -192,7 +214,7 @@ export class EmailService {
   async sendAppointmentRejectedToPatient(appointment: any, reason?: string) {
     await this.send({
       to: appointment.patientEmail,
-      from: this.from,
+
       subject: `Appointment Update - ${appointment.doctorName}`,
       html: `
         <h1>Appointment Status Update</h1>
