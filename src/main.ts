@@ -13,19 +13,24 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   // CORS - Support multiple frontend URLs
-  const allowedOrigins = process.env.FRONTEND_URL 
-    ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
-    : ['http://localhost:3000'];
+  const frontendUrls = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const allowedOrigins = frontendUrls.split(',').map(url => url.trim());
+  
+  logger.log(`🌐 Allowed CORS origins: ${JSON.stringify(allowedOrigins)}`);
   
   app.enableCors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
+    origin: function(origin, callback) {
+      // Allow requests with no origin (mobile apps, Postman, curl, etc.)
+      if (!origin) {
+        return callback(null, true);
+      }
       
-      if (allowedOrigins.includes(origin)) {
+      // Check if the origin is in our allowed list
+      if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        logger.warn(`❌ Blocked origin: ${origin}`);
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
       }
     },
     credentials: true,
