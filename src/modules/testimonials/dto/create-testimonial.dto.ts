@@ -1,6 +1,6 @@
 import { IsString, IsEnum, IsOptional, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { TestimonialCategory, ServiceType } from '../entities/testimonial.entity';
+import { PatientCategory, ServiceType } from '../entities/testimonial.entity';
 
 export class CreateTestimonialDto {
   @ApiPropertyOptional({ example: 'A.L.' })
@@ -9,16 +9,16 @@ export class CreateTestimonialDto {
   @MaxLength(100)
   patientName?: string;
 
-  @ApiProperty({ enum: TestimonialCategory, example: TestimonialCategory.STAFF })
-  @IsEnum(TestimonialCategory)
-  category: TestimonialCategory;
+  @ApiProperty({ enum: PatientCategory, example: PatientCategory.STAFF })
+  @IsEnum(PatientCategory)
+  patientCategory: PatientCategory;
 
-  @ApiProperty({ example: 'Excellent triage process' })
+  @ApiProperty({ example: 'Great Experience' })
   @IsString()
   @MaxLength(200)
   title: string;
 
-  @ApiProperty({ example: 'The triage process was quick and efficient.' })
+  @ApiProperty({ example: 'The doctors were very professional.' })
   @IsString()
   @MaxLength(1000)
   message: string;

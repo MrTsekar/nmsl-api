@@ -6,17 +6,15 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-export enum TestimonialCategory {
-  STAFF = 'staff',
-  DEPENDENT = 'dependent',
-  PATIENT = 'patient',
+export enum PatientCategory {
+  STAFF = 'Staff',
+  RETIREE = 'Retiree',
+  DEPENDENT = 'Dependent',
 }
 
 export enum ServiceType {
-  PHYSICAL_APPOINTMENT = 'physical_appointment',
-  TELEMEDICINE = 'telemedicine',
-  LABORATORY = 'laboratory',
-  PHARMACY = 'pharmacy',
+  PHYSICAL_APPOINTMENT = 'Physical Appointment',
+  TELEMEDICINE = 'Telemedicine',
 }
 
 @Entity('testimonials')
@@ -29,10 +27,9 @@ export class Testimonial {
 
   @Column({
     type: 'enum',
-    enum: TestimonialCategory,
-    default: TestimonialCategory.PATIENT,
+    enum: PatientCategory,
   })
-  category: TestimonialCategory;
+  patientCategory: PatientCategory;
 
   @Column()
   title: string;
@@ -43,7 +40,6 @@ export class Testimonial {
   @Column({
     type: 'enum',
     enum: ServiceType,
-    default: ServiceType.PHYSICAL_APPOINTMENT,
   })
   serviceType: ServiceType;
 

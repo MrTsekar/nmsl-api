@@ -25,13 +25,22 @@ export class TestimonialsController {
   @Get('testimonials')
   @ApiOperation({ summary: 'Get all active testimonials (public)' })
   findAll() {
+    return this.testimonialsService.findAllActive();
+  }
+
+  @Get('admin/testimonials')
+  @ApiBearerAuth('JWT')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.APPOINTMENT_OFFICER)
+  @ApiOperation({ summary: 'Get all testimonials (admin)' })
+  findAllAdmin() {
     return this.testimonialsService.findAll();
   }
 
   @Post('admin/testimonials')
   @ApiBearerAuth('JWT')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.APPOINTMENT_OFFICER)
   @ApiOperation({ summary: 'Create testimonial (admin)' })
   create(@Body() dto: CreateTestimonialDto) {
     return this.testimonialsService.create(dto);
@@ -40,7 +49,7 @@ export class TestimonialsController {
   @Patch('admin/testimonials/:id')
   @ApiBearerAuth('JWT')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.APPOINTMENT_OFFICER)
   @ApiOperation({ summary: 'Update testimonial (admin)' })
   update(@Param('id') id: string, @Body() dto: UpdateTestimonialDto) {
     return this.testimonialsService.update(id, dto);
@@ -49,7 +58,7 @@ export class TestimonialsController {
   @Delete('admin/testimonials/:id')
   @ApiBearerAuth('JWT')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.APPOINTMENT_OFFICER)
   @ApiOperation({ summary: 'Delete testimonial (admin)' })
   remove(@Param('id') id: string) {
     return this.testimonialsService.remove(id);

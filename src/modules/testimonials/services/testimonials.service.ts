@@ -19,6 +19,12 @@ export class TestimonialsService {
 
   async findAll(): Promise<Testimonial[]> {
     return this.testimonialRepository.find({
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findAllActive(): Promise<Testimonial[]> {
+    return this.testimonialRepository.find({
       where: { isActive: true },
       order: { createdAt: 'DESC' },
     });
