@@ -88,6 +88,13 @@ export class AdminController {
     return this.adminService.updateDoctorAvailability(id, dto, user);
   }
 
+  @Patch('doctors/:id/toggle-status')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Toggle doctor active status' })
+  toggleDoctorStatus(@Param('id') id: string) {
+    return this.adminService.toggleDoctorStatus(id);
+  }
+
   // ─── Admins ───────────────────────────────────────────────────────────────
   @Get('admins')
   @Roles(UserRole.ADMIN)

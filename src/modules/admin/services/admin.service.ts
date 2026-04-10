@@ -151,6 +151,21 @@ export class AdminService {
     return this.doctorsService.updateAvailability(doctorId, dto, currentUser);
   }
 
+  async toggleDoctorStatus(id: string) {
+    const doctor = await this.doctorsRepository.findOne({ where: { id } });
+    if (!doctor) throw new NotFoundException('Doctor not found');
+    
+    doctor.isActive = !doctor.isActive;
+    await this.doctorsRepository.save(doctor);
+    
+    return {
+      success: true,
+      id: doctor.id,
+      isActive: doctor.isActive,
+      message: doctor.isActive ? 'Doctor activated successfully' : 'Doctor deactivated successfully',
+    };
+  }
+
   // ─── Admins ───────────────────────────────────────────────────────────────
   async getAdmins() {
     return this.usersService.findAdmins();
