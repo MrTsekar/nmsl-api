@@ -23,6 +23,7 @@ import { CreateAdminDto } from '../dto/create-admin.dto';
 import { ChangeAdminPasswordDto } from '../dto/change-admin-password.dto';
 import { UpdateUserEmailDto } from '../dto/update-user-email.dto';
 import { UpdateAppointmentStatusDto, RescheduleAppointmentAdminDto } from '../dto/update-appointment.dto';
+import { UpdateAvailabilityDto } from '../../doctors/dto/update-availability.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
@@ -67,6 +68,24 @@ export class AdminController {
   @ApiOperation({ summary: 'Create new doctor account' })
   createDoctor(@Body() dto: CreateDoctorDto) {
     return this.adminService.createDoctor(dto);
+  }
+
+  @Get('doctors/:id/availability')
+  @Roles(UserRole.ADMIN, UserRole.APPOINTMENT_OFFICER)
+  @ApiOperation({ summary: "Get doctor's availability" })
+  getDoctorAvailability(@Param('id') id: string) {
+    return this.adminService.getDoctorAvailability(id);
+  }
+
+  @Patch('doctors/:id/availability')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Update doctor's availability" })
+  updateDoctorAvailability(
+    @Param('id') id: string,
+    @Body() dto: UpdateAvailabilityDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.adminService.updateDoctorAvailability(id, dto, user);
   }
 
   // ─── Admins ───────────────────────────────────────────────────────────────

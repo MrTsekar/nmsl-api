@@ -11,6 +11,7 @@ import { CreateAdminDto } from '../dto/create-admin.dto';
 import { ChangeAdminPasswordDto } from '../dto/change-admin-password.dto';
 import { UpdateUserEmailDto } from '../dto/update-user-email.dto';
 import { UpdateAppointmentStatusDto, RescheduleAppointmentAdminDto } from '../dto/update-appointment.dto';
+import { UpdateAvailabilityDto } from '../../doctors/dto/update-availability.dto';
 import { UsersService } from '../../users/services/users.service';
 import { DoctorsService } from '../../doctors/services/doctors.service';
 import { EmailService } from '../../notifications/services/email.service';
@@ -118,6 +119,18 @@ export class AdminService {
       page,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  async getDoctorAvailability(doctorId: string): Promise<DoctorAvailability> {
+    return this.doctorsService.getAvailability(doctorId);
+  }
+
+  async updateDoctorAvailability(
+    doctorId: string,
+    dto: UpdateAvailabilityDto,
+    currentUser: User,
+  ): Promise<DoctorAvailability> {
+    return this.doctorsService.updateAvailability(doctorId, dto, currentUser);
   }
 
   // ─── Admins ───────────────────────────────────────────────────────────────
