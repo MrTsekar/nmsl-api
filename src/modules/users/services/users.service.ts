@@ -73,8 +73,10 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async updateRaw(id: string, data: Partial<User>): Promise<void> {
-    await this.usersRepository.update(id, data);
+  async updateRaw(id: string, data: Partial<User>): Promise<User> {
+    const user = await this.findById(id);
+    Object.assign(user, data);
+    return this.usersRepository.save(user);
   }
 
   async toggleStatus(id: string): Promise<User> {

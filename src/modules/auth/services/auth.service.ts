@@ -107,8 +107,7 @@ export class AuthService {
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto): Promise<User> {
-    await this.usersService.updateRaw(userId, dto as Partial<User>);
-    return this.usersService.findById(userId);
+    return this.usersService.updateRaw(userId, dto as Partial<User>);
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
@@ -122,8 +121,11 @@ export class AuthService {
     this.logger.debug(`New password length: ${dto.newPassword?.length}`);
     const hashed = await bcrypt.hash(dto.newPassword, 10);
     this.logger.debug(`Hashed password (first 10 chars): ${hashed.substring(0, 10)}...`);
-    await this.usersService.updateRaw(userId, { password: hashed } as any);
+    
+    const updatedUser = await this.usersService.updateRaw(userId, { password: hashed } as any);
     this.logger.log(`✅ Password changed successfully for user: ${userId}`);
+    this.logger.debug(`Saved password (first 10 chars): ${updatedUser.password.substring(0, 10)}...`);
+    
     return { success: true, message: 'Password changed successfully' };
   }
 

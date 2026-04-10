@@ -201,8 +201,11 @@ export class AdminService {
     this.logger.debug(`New password length: ${dto.newPassword?.length}`);
     const hashed = await bcrypt.hash(dto.newPassword, 10);
     this.logger.debug(`Hashed password (first 10 chars): ${hashed.substring(0, 10)}...`);
-    await this.usersService.updateRaw(id, { password: hashed } as any);
+    
+    const updatedUser = await this.usersService.updateRaw(id, { password: hashed } as any);
     this.logger.log(`✅ Admin password changed successfully for user: ${id}`);
+    this.logger.debug(`Saved password (first 10 chars): ${updatedUser.password.substring(0, 10)}...`);
+    
     return { success: true, message: 'Password updated successfully' };
   }
 
