@@ -31,3 +31,6 @@ coverage/
 
 # Documentation files
 *.md
+
+# Postman collections
+*.postman_collection.json
