@@ -92,4 +92,77 @@ export class FileUploadService {
 
     return `${blobUrl}?${sasToken}`;
   }
+
+  /**
+   * Upload a base64 encoded image to Azure Blob Storage
+   * @param base64Data - Base64 string (can include data URL prefix like "data:image/png;base64,...")
+   * @param folder - Folder path in blob storage (e.g., 'services/banners')
+   * @param filename - File name (without extension, will be generated)
+   * @returns URL of uploaded file
+   */
+  async uploadBase64Image(base64Data: string, folder: string, filename?: string): Promise<string> {
+    if (!base64Data) {
+      throw new BadRequestException('No image data provided');
+    }
+
+    try {
+      // Extract mime type and base64 content
+      let mimeType = 'image/png'; // default
+      let base64Content = base64Data;
+
+      // Handle data URL format: data:image/png;base64,iVBORw0KG...
+      if (base64Data.startsWith('data:')) {
+        const matches = base64Data.match(/^data:([^;]+);base64,(.+)$/);
+        if (matches) {
+          mimeType = matches[1];
+          base64Content = matches[2];
+        }
+      }
+
+      // Validate mime type
+      const validImageTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
+      if (!validImageTypes.includes(mimeType)) {
+        throw new BadRequestException(`Invalid image type: ${mimeType}. Only PNG, JPEG, WEBP, GIF allowed.`);
+      }
+
+      // Convert base64 to buffer
+      const buffer = Buffer.from(base64Content, 'base64');
+
+      // Validate size (10MB limit)
+      if (buffer.length > MAX_SIZE_BYTES) {
+        throw new BadRequestException(`Image size exceeds 10MB limit (${(buffer.length / 1024 / 1024).toFixed(2)}MB)`);
+      }
+
+      // Generate filename
+      const extension = mimeType.split('/')[1];
+      const blobName = `${folder}/${filename || Date.now()}.${extension}`;
+
+      this.logger.log(`📤 Uploading base64 image: ${blobName} (${(buffer.length / 1024).toFixed(2)}KB)`);
+
+      // Mock upload if not configured
+      if (!this.enabled) {
+        const mockUrl = `https://mock-azure.nmsl.com/${this.container}/${blobName}`;
+        this.logger.log(`[AZURE MOCK] Uploaded: ${mockUrl}`);
+        return mockUrl;
+      }
+
+      // Upload to Azure
+      const containerClient = this.blobServiceClient.getContainerClient(this.container);
+      await containerClient.createIfNotExists({ access: 'blob' }); // public read access
+
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+      await blockBlobClient.uploadData(buffer, {
+        blobHTTPHeaders: { 
+          blobContentType: mimeType,
+          blobCacheControl: 'public, max-age=31536000', // Cache for 1 year
+        },
+      });
+
+      this.logger.log(`✅ Uploaded: ${blockBlobClient.url}`);
+      return blockBlobClient.url;
+    } catch (error) {
+      this.logger.error(`Failed to upload base64 image: ${error.message}`, error.stack);
+      throw new BadRequestException(`Image upload failed: ${error.message}`);
+    }
+  }
 }

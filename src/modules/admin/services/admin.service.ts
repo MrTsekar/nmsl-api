@@ -197,14 +197,35 @@ export class AdminService {
 
   async changeAdminPassword(id: string, dto: ChangeAdminPasswordDto) {
     this.logger.log(`🔄 Admin password change for user: ${id}`);
-    await this.usersService.findById(id); // ensures existence
-    this.logger.debug(`New password length: ${dto.newPassword?.length}`);
-    const hashed = await bcrypt.hash(dto.newPassword, 10);
-    this.logger.debug(`Hashed password (first 10 chars): ${hashed.substring(0, 10)}...`);
     
-    const updatedUser = await this.usersService.updateRaw(id, { password: hashed } as any);
-    this.logger.log(`✅ Admin password changed successfully for user: ${id}`);
-    this.logger.debug(`Saved password (first 10 chars): ${updatedUser.password.substring(0, 10)}...`);
+    // Find the user entity
+    const user = await this.usersService.findById(id);
+    this.logger.debug(`Current password hash (first 10): ${user.password.substring(0, 10)}...`);
+    
+    // Hash new password
+    const hashed = await bcrypt.hash(dto.newPassword, 10);
+    this.logger.debug(`New password length: ${dto.newPassword?.length}`);
+    this.logger.debug(`New hashed password (first 10): ${hashed.substring(0, 10)}...`);
+    
+    // Update password field directly
+    user.password = hashed;
+    
+    // Save with explicit transaction
+    const savedUser = await this.usersRepository.save(user);
+    this.logger.log(`✅ Password saved to entity`);
+    
+    // Force a fresh read from database to verify
+    const verifyUser = await this.usersRepository.findOne({ where: { id } });
+    this.logger.debug(`Verification - DB password (first 10): ${verifyUser.password.substring(0, 10)}...`);
+    
+    // Test the new password
+    const testMatch = await bcrypt.compare(dto.newPassword, verifyUser.password);
+    this.logger.log(`🔐 Password verification test: ${testMatch ? '✅ PASS' : '❌ FAIL'}`);
+    
+    if (!testMatch) {
+      this.logger.error('❌ PASSWORD NOT SAVED CORRECTLY - ROLLING BACK');
+      throw new Error('Password update failed verification');
+    }
     
     return { success: true, message: 'Password updated successfully' };
   }
