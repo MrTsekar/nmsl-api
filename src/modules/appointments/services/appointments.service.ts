@@ -159,15 +159,9 @@ export class AppointmentsService {
       doctorName: doctor.name,
     });
 
-    const notification = await this.notificationsService.create({
-      userId: doctor.id,
-      type: NotificationType.APPOINTMENT_CONFIRMED,
-      title: 'New Appointment Request',
-      message: `${patient.name} has booked an appointment on ${dto.appointmentDate} at ${dto.appointmentTime}`,
-      actionUrl: `/app/appointments/${saved.id}`,
-      metadata: { appointmentId: saved.id },
-    });
-    this.chatGateway.emitNotification(doctor.id, notification);
+    // No notification - appointments are visible in dashboard
+    // Real-time update via WebSocket only
+    this.chatGateway.emitAppointmentUpdate(doctor.id, saved);
 
     return saved;
   }
@@ -232,37 +226,9 @@ export class AppointmentsService {
     const recipientId =
       actor.role === UserRole.DOCTOR ? appointment.patientId : appointment.doctorId;
 
-    const notifMap: Record<string, { type: NotificationType; title: string; msg: string }> = {
-      [AppointmentStatus.CONFIRMED]: {
-        type: NotificationType.APPOINTMENT_CONFIRMED,
-        title: 'Appointment Confirmed',
-        msg: `Your appointment with ${appointment.doctorName} on ${appointment.appointmentDate} at ${appointment.appointmentTime} has been confirmed.`,
-      },
-      [AppointmentStatus.CANCELLED]: {
-        type: NotificationType.APPOINTMENT_CANCELLED,
-        title: 'Appointment Cancelled',
-        msg: `Your appointment on ${appointment.appointmentDate} at ${appointment.appointmentTime} has been cancelled.`,
-      },
-      [AppointmentStatus.RESCHEDULED]: {
-        type: NotificationType.APPOINTMENT_RESCHEDULED,
-        title: 'Appointment Rescheduled',
-        msg: `Your appointment has been rescheduled to ${appointment.appointmentDate} at ${appointment.appointmentTime}.`,
-      },
-    };
-
-    const notifData = notifMap[newStatus];
-    if (notifData) {
-      const notification = await this.notificationsService.create({
-        userId: recipientId,
-        type: notifData.type,
-        title: notifData.title,
-        message: notifData.msg,
-        actionUrl: `/app/appointments/${appointment.id}`,
-        metadata: { appointmentId: appointment.id },
-      });
-      this.chatGateway.emitNotification(recipientId, notification);
-      this.chatGateway.emitAppointmentUpdate(recipientId, appointment);
-    }
+    // No notification for status changes - appointments visible in dashboard
+    // Real-time update via WebSocket only
+    this.chatGateway.emitAppointmentUpdate(recipientId, appointment);
 
     if (newStatus === AppointmentStatus.CONFIRMED) {
       try {
@@ -271,6 +237,7 @@ export class AppointmentsService {
       } catch (e) {}
     }
 
+    // Keep prescription notification - medical importance
     if (newStatus === AppointmentStatus.COMPLETED && appointment.prescriptions?.length > 0) {
       const patientNotif = await this.notificationsService.create({
         userId: appointment.patientId,
@@ -338,15 +305,8 @@ export class AppointmentsService {
     const otherUserId =
       currentUser.id === appointment.patientId ? appointment.doctorId : appointment.patientId;
 
-    const notification = await this.notificationsService.create({
-      userId: otherUserId,
-      type: NotificationType.APPOINTMENT_RESCHEDULED,
-      title: 'Appointment Rescheduled',
-      message: `Your appointment has been rescheduled to ${dto.appointmentDate} at ${dto.appointmentTime}. Reason: ${dto.reason}`,
-      actionUrl: `/app/appointments/${id}`,
-      metadata: { appointmentId: id },
-    });
-    this.chatGateway.emitNotification(otherUserId, notification);
+    // No notification for reschedule - appointments visible in dashboard
+    // Real-time update via WebSocket only
     this.chatGateway.emitAppointmentUpdate(otherUserId, saved);
 
     return saved;

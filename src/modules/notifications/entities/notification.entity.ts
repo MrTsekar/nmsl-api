@@ -10,15 +10,25 @@ import {
 import { User } from '../../users/entities/user.entity';
 
 export enum NotificationType {
-  APPOINTMENT_CONFIRMED = 'appointment_confirmed',
-  APPOINTMENT_RESCHEDULED = 'appointment_rescheduled',
-  APPOINTMENT_CANCELLED = 'appointment_cancelled',
-  APPOINTMENT_CONFLICT = 'appointment_conflict',
-  NEW_MESSAGE = 'new_message',
+  // Security & Account
+  PASSWORD_CHANGED = 'password_changed',
+  EMAIL_CHANGED = 'email_changed',
+  ACCOUNT_SECURITY = 'account_security',
+  
+  // Medical (Critical for patients)
   NEW_PRESCRIPTION = 'new_prescription',
   NEW_RESULT = 'new_result',
-  PASSWORD_CHANGED = 'password_changed',
-  ACCOUNT_SECURITY = 'account_security',
+  
+  // Content Management (for admins)
+  SERVICE_ADDED = 'service_added',
+  SERVICE_UPDATED = 'service_updated',
+  SERVICE_DELETED = 'service_deleted',
+  BOARD_MEMBER_ADDED = 'board_member_added',
+  BOARD_MEMBER_REMOVED = 'board_member_removed',
+  
+  // Website Interactions
+  CONTACT_FORM_SUBMITTED = 'contact_form_submitted',
+  NEW_MESSAGE = 'new_message',
 }
 
 @Entity('notifications')

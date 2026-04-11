@@ -204,16 +204,8 @@ export class DoctorsService {
         await this.appointmentsRepository.save(appt);
         conflictedAppointments.push(appt);
 
-        const notification = await this.notificationsService.create({
-          userId: appt.patientId,
-          type: NotificationType.APPOINTMENT_CONFLICT,
-          title: 'Appointment Needs Rebooking',
-          message: `Your appointment with ${appt.doctorName} on ${appt.appointmentDate} at ${appt.appointmentTime} is no longer available. Please rebook.`,
-          actionUrl: '/app/appointments',
-          metadata: { appointmentId: appt.id, originalDoctorId: doctorId },
-        });
-
-        this.chatGateway.emitNotification(appt.patientId, notification);
+        // No notification - conflict flag visible in appointments dashboard
+        // Real-time update via WebSocket
         this.chatGateway.emitAppointmentUpdate(appt.patientId, appt);
 
         try {
