@@ -7,7 +7,7 @@ import { BoardMember } from '../modules/board-members/entities/board-member.enti
 import { Partner } from '../modules/partners/entities/partner.entity';
 import { ContactInfo } from '../modules/contact/entities/contact-info.entity';
 import { Statistic } from '../modules/statistics/entities/statistic.entity';
-import { Service, ServiceCategory } from '../modules/services/entities/service.entity';
+import { Service, ServiceCategory, NigeriaLocation } from '../modules/services/entities/service.entity';
 import { Appointment, AppointmentStatus } from '../modules/appointments/entities/appointment.entity';
 
 export async function seedDatabase(dataSource: DataSource) {
@@ -313,7 +313,7 @@ export async function seedDatabase(dataSource: DataSource) {
     {
       name: 'Accident & Emergency',
       category: ServiceCategory.EMERGENCY_SERVICES,
-      location: 'All Locations',
+      location: NigeriaLocation.ABUJA,
       shortDescription: '24/7 emergency care and trauma services',
       fullDescription: 'Our Accident & Emergency department provides round-the-clock emergency medical care with state-of-the-art facilities and experienced medical professionals ready to handle all types of medical emergencies.',
       bannerImageUrl: '/services/emergency-banner.jpg',
@@ -328,7 +328,7 @@ export async function seedDatabase(dataSource: DataSource) {
     {
       name: 'General Practice',
       category: ServiceCategory.PRIMARY_CARE,
-      location: 'All Locations',
+      location: NigeriaLocation.LAGOS,
       shortDescription: 'Comprehensive primary healthcare services',
       fullDescription: 'Our General Practice department offers comprehensive primary healthcare services including routine check-ups, preventive care, and management of common medical conditions.',
       bannerImageUrl: '/services/general-practice-banner.jpg',
@@ -343,7 +343,7 @@ export async function seedDatabase(dataSource: DataSource) {
     {
       name: 'Specialized Cardiology Care',
       category: ServiceCategory.SPECIALIZED_CARE,
-      location: 'Abuja, Lagos',
+      location: NigeriaLocation.ABUJA,
       shortDescription: 'Advanced cardiac care and treatment',
       fullDescription: 'Our Cardiology department provides comprehensive cardiac care including diagnostics, treatment, and rehabilitation for various heart conditions.',
       bannerImageUrl: '/services/cardiology-banner.jpg',

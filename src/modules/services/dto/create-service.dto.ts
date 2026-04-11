@@ -8,7 +8,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ServiceCategory } from '../entities/service.entity';
+import { ServiceCategory, NigeriaLocation } from '../entities/service.entity';
 
 export class KeyServiceDto {
   @ApiProperty()
@@ -29,9 +29,14 @@ export class CreateServiceDto {
   @IsEnum(ServiceCategory)
   category: ServiceCategory;
 
-  @ApiProperty()
-  @IsString()
-  location: string;
+  @ApiProperty({ 
+    enum: NigeriaLocation,
+    description: 'Service location - one of: Abuja, Lagos, Benin, Kaduna, Port Harcourt, Warri'
+  })
+  @IsEnum(NigeriaLocation, { 
+    message: 'Location must be one of: Abuja, Lagos, Benin, Kaduna, Port Harcourt, Warri' 
+  })
+  location: NigeriaLocation;
 
   @ApiProperty()
   @IsString()

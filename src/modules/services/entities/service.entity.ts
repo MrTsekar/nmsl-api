@@ -19,6 +19,15 @@ export enum ServiceCategory {
   REHABILITATION = 'Rehabilitation',
 }
 
+export enum NigeriaLocation {
+  ABUJA = 'Abuja',
+  LAGOS = 'Lagos',
+  BENIN = 'Benin',
+  KADUNA = 'Kaduna',
+  PORT_HARCOURT = 'Port Harcourt',
+  WARRI = 'Warri',
+}
+
 export interface KeyServiceItem {
   title: string;
   description: string;
@@ -38,8 +47,11 @@ export class Service {
   })
   category: ServiceCategory;
 
-  @Column()
-  location: string; // Abuja, Lagos, Benin, Kaduna, Port Harcourt, Warri
+  @Column({
+    type: 'enum',
+    enum: NigeriaLocation,
+  })
+  location: NigeriaLocation;
 
   @Column({ type: 'text' })
   shortDescription: string;
