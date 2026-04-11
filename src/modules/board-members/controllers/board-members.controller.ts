@@ -7,8 +7,9 @@ import {
   Param,
   Body,
   UseGuards,
+  Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { BoardMembersService } from '../services/board-members.service';
 import { CreateBoardMemberDto } from '../dto/create-board-member.dto';
 import { UpdateBoardMemberDto } from '../dto/update-board-member.dto';
@@ -16,11 +17,15 @@ import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '../../users/entities/user.entity';
+import { FileUploadService } from '../../file-upload/services/file-upload.service';
 
 @ApiTags('Board Members')
 @Controller()
 export class BoardMembersController {
-  constructor(private readonly boardMembersService: BoardMembersService) {}
+  constructor(
+    private readonly boardMembersService: BoardMembersService,
+    private readonly fileUploadService: FileUploadService,
+  ) {}
 
   // Public route — active members only
   @Get('board-members')
@@ -30,6 +35,20 @@ export class BoardMembersController {
   }
 
   // Admin routes
+  @Get('admin/board-members/upload-url')
+  @ApiBearerAuth('JWT')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get upload URL for board member photo (direct Azure upload)' })
+  @ApiQuery({ name: 'filename', required: true, example: 'photo.jpg' })
+  @ApiQuery({ name: 'contentType', required: false, example: 'image/jpeg' })
+  async getUploadUrl(
+    @Query('filename') filename: string,
+    @Query('contentType') contentType?: string,
+  ) {
+    return this.fileUploadService.generateUploadUrl('board-members', filename, contentType);
+  }
+
   @Get('admin/board-members')
   @ApiBearerAuth('JWT')
   @UseGuards(JwtAuthGuard, RolesGuard)

@@ -7,8 +7,9 @@ import {
   Param,
   Body,
   UseGuards,
+  Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { PartnersService } from '../services/partners.service';
 import { CreatePartnerDto } from '../dto/create-partner.dto';
 import { UpdatePartnerDto } from '../dto/update-partner.dto';
@@ -16,11 +17,15 @@ import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '../../users/entities/user.entity';
+import { FileUploadService } from '../../file-upload/services/file-upload.service';
 
 @ApiTags('Partners')
 @Controller()
 export class PartnersController {
-  constructor(private readonly partnersService: PartnersService) {}
+  constructor(
+    private readonly partnersService: PartnersService,
+    private readonly fileUploadService: FileUploadService,
+  ) {}
 
   // Public route — active partners only
   @Get('partners')
@@ -30,6 +35,20 @@ export class PartnersController {
   }
 
   // Admin routes
+  @Get('admin/partners/upload-url')
+  @ApiBearerAuth('JWT')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get upload URL for partner logo (direct Azure upload)' })
+  @ApiQuery({ name: 'filename', required: true, example: 'logo.png' })
+  @ApiQuery({ name: 'contentType', required: false, example: 'image/png' })
+  async getUploadUrl(
+    @Query('filename') filename: string,
+    @Query('contentType') contentType?: string,
+  ) {
+    return this.fileUploadService.generateUploadUrl('partners', filename, contentType);
+  }
+
   @Get('admin/partners')
   @ApiBearerAuth('JWT')
   @UseGuards(JwtAuthGuard, RolesGuard)

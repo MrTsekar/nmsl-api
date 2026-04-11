@@ -165,4 +165,77 @@ export class FileUploadService {
       throw new BadRequestException(`Image upload failed: ${error.message}`);
     }
   }
+
+  /**
+   * Generate a SAS URL for direct upload from frontend
+   * @param folder - Folder path in blob storage (e.g., 'partners', 'services/banners')
+   * @param filename - Original filename with extension
+   * @param contentType - MIME type (e.g., 'image/png')
+   * @returns Object with uploadUrl (with SAS token) and finalUrl (public URL)
+   */
+  async generateUploadUrl(folder: string, filename: string, contentType?: string): Promise<{
+    uploadUrl: string;
+    finalUrl: string;
+    blobName: string;
+  }> {
+    // Sanitize filename and generate unique blob name
+    const sanitizedFilename = filename.toLowerCase().replace(/[^a-z0-9.-]/g, '-');
+    const timestamp = Date.now();
+    const blobName = `${folder}/${timestamp}-${sanitizedFilename}`;
+
+    if (!this.enabled) {
+      // Return mock URLs for local development
+      const mockUrl = `https://mock-azure.nmsl.com/${this.container}/${blobName}`;
+      this.logger.log(`[AZURE MOCK] Generated upload URL for: ${blobName}`);
+      return {
+        uploadUrl: mockUrl,
+        finalUrl: mockUrl,
+        blobName,
+      };
+    }
+
+    try {
+      // Create container if it doesn't exist
+      const containerClient = this.blobServiceClient.getContainerClient(this.container);
+      await containerClient.createIfNotExists({ access: 'blob' });
+
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+      
+      // Generate SAS token with write permission (valid for 1 hour)
+      const sharedKeyCredential = new StorageSharedKeyCredential(
+        this.accountName,
+        this.accountKey,
+      );
+
+      const startsOn = new Date();
+      const expiresOn = new Date();
+      expiresOn.setHours(expiresOn.getHours() + 1); // 1 hour validity
+
+      const sasToken = generateBlobSASQueryParameters(
+        {
+          containerName: this.container,
+          blobName,
+          permissions: BlobSASPermissions.parse('w'), // Write permission only
+          startsOn,
+          expiresOn,
+          contentType, // Lock the content type
+        },
+        sharedKeyCredential,
+      ).toString();
+
+      const uploadUrl = `${blockBlobClient.url}?${sasToken}`;
+      const finalUrl = blockBlobClient.url;
+
+      this.logger.log(`📤 Generated upload URL for: ${blobName} (expires in 1 hour)`);
+
+      return {
+        uploadUrl,
+        finalUrl,
+        blobName,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to generate upload URL: ${error.message}`, error.stack);
+      throw new BadRequestException(`Failed to generate upload URL: ${error.message}`);
+    }
+  }
 }
