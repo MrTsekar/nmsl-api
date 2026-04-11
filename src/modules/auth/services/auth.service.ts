@@ -16,6 +16,8 @@ import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
 import { User } from '../../users/entities/user.entity';
 import { EmailService } from '../../notifications/services/email.service';
+import { NotificationsService } from '../../notifications/services/notifications.service';
+import { NotificationType } from '../../notifications/entities/notification.entity';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +27,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private emailService: EmailService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async signIn(dto: SignInDto) {
@@ -148,6 +151,16 @@ export class AuthService {
     }
     
     this.logger.log(`✅ Password changed AND VERIFIED for user: ${userId}`);
+    
+    // Create security notification
+    const notification = await this.notificationsService.create({
+      userId: userId,
+      type: NotificationType.PASSWORD_CHANGED,
+      title: 'Password Changed',
+      message: 'Please sign in with your new password',
+      actionUrl: '/auth/sign-in',
+      metadata: { timestamp: new Date().toISOString() },
+    });
     
     return { 
       success: true, 

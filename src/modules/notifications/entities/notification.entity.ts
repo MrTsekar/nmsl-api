@@ -17,6 +17,8 @@ export enum NotificationType {
   NEW_MESSAGE = 'new_message',
   NEW_PRESCRIPTION = 'new_prescription',
   NEW_RESULT = 'new_result',
+  PASSWORD_CHANGED = 'password_changed',
+  ACCOUNT_SECURITY = 'account_security',
 }
 
 @Entity('notifications')
