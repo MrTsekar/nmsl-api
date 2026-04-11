@@ -14,6 +14,11 @@ export class CreatePartnerDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   website?: string;
 
   @ApiPropertyOptional()

@@ -17,6 +17,9 @@ export class Partner {
   @Column({ nullable: true })
   logo: string;
 
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
   @Column({ nullable: true })
   website: string;
 
