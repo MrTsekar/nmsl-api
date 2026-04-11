@@ -2,17 +2,21 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike, In } from 'typeorm';
+import { Repository, ILike, In, DataSource } from 'typeorm';
 import { User, UserRole } from '../entities/user.entity';
 import { UpdateUserDto } from '../dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async findAll(query: {
@@ -74,9 +78,63 @@ export class UsersService {
   }
 
   async updateRaw(id: string, data: Partial<User>): Promise<User> {
-    const user = await this.findById(id);
-    Object.assign(user, data);
-    return this.usersRepository.save(user);
+    this.logger.log(`🔄 updateRaw called for user: ${id}`);
+    
+    // Use QueryRunner for explicit transaction and proper isolation
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Load user within transaction context
+      const user = await queryRunner.manager.findOne(User, { 
+        where: { id } 
+      });
+      
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      // Log before changes
+      if (data.password) {
+        this.logger.debug(`Before: password hash = ${user.password.substring(0, 10)}...`);
+        this.logger.debug(`New: password hash = ${data.password.substring(0, 10)}...`);
+      }
+
+      // Apply changes
+      Object.assign(user, data);
+      
+      // Save with explicit transaction manager
+      const savedUser = await queryRunner.manager.save(User, user);
+      
+      // Verify the save by re-reading from database
+      const verifiedUser = await queryRunner.manager.findOne(User, { 
+        where: { id } 
+      });
+      
+      if (data.password && verifiedUser.password !== data.password) {
+        throw new Error('Password verification failed - save did not persist');
+      }
+
+      // Commit transaction
+      await queryRunner.commitTransaction();
+      
+      this.logger.log(`✅ updateRaw successful for user: ${id}`);
+      if (data.password) {
+        this.logger.debug(`After: password hash = ${verifiedUser.password.substring(0, 10)}...`);
+      }
+      
+      return verifiedUser;
+    } catch (error) {
+      // Rollback on any error
+      await queryRunner.rollbackTransaction();
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`❌ updateRaw failed: ${errorMessage}`);
+      throw error;
+    } finally {
+      // Release query runner
+      await queryRunner.release();
+    }
   }
 
   async toggleStatus(id: string): Promise<User> {

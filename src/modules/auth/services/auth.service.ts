@@ -120,24 +120,39 @@ export class AuthService {
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
     this.logger.log(`🔄 Password change request for user: ${userId}`);
+    
+    // Step 1: Validate current password
     const user = await this.usersService.findById(userId);
     const isValid = await bcrypt.compare(dto.currentPassword, user.password);
     if (!isValid) {
       this.logger.warn(`❌ Current password incorrect for user: ${userId}`);
       throw new BadRequestException('Current password is incorrect');
     }
+    
+    // Step 2: Hash new password
     this.logger.debug(`New password length: ${dto.newPassword?.length}`);
     const hashed = await bcrypt.hash(dto.newPassword, 10);
     this.logger.debug(`Hashed password (first 10 chars): ${hashed.substring(0, 10)}...`);
     
+    // Step 3: Save with transaction (updateRaw now uses QueryRunner)
     const updatedUser = await this.usersService.updateRaw(userId, { password: hashed } as any);
-    this.logger.log(`✅ Password changed successfully for user: ${userId}`);
     this.logger.debug(`Saved password (first 10 chars): ${updatedUser.password.substring(0, 10)}...`);
+    
+    // Step 4: Verify by testing the new password
+    const finalUser = await this.usersService.findById(userId);
+    const testNewPassword = await bcrypt.compare(dto.newPassword, finalUser.password);
+    
+    if (!testNewPassword) {
+      this.logger.error(`❌ CRITICAL: Password verification failed for user: ${userId}`);
+      throw new Error('Password change verification failed');
+    }
+    
+    this.logger.log(`✅ Password changed AND VERIFIED for user: ${userId}`);
     
     return { 
       success: true, 
       message: 'Password changed successfully. Please login with your new password.',
-      requiresReauth: true, // Flag to frontend that they should logout
+      requiresReauth: true,
     };
   }
 
