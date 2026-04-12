@@ -1,12 +1,10 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
-import { ConfigModule } from '@nestjs/config';
+import * as dotenv from 'dotenv';
 import { seedDatabase } from './seed';
 
 // Load environment variables
-ConfigModule.forRoot({
-  envFilePath: '.env',
-});
+dotenv.config();
 
 const AppDataSource = new DataSource({
   type: 'postgres',
@@ -15,6 +13,9 @@ const AppDataSource = new DataSource({
   username: process.env.DATABASE_USER || 'postgres',
   password: process.env.DATABASE_PASSWORD || '',
   database: process.env.DATABASE_NAME || 'nmsl_healthcare',
+  ssl: process.env.DATABASE_SSL === 'true' 
+    ? { rejectUnauthorized: false } 
+    : false,
   entities: ['src/**/*.entity.ts'],
   synchronize: false,
 });
