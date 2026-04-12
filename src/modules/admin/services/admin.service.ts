@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -54,6 +54,28 @@ export class AdminService {
 
   // ─── Doctors ─────────────────────────────────────────────────────────────
   async createDoctor(dto: CreateDoctorDto): Promise<Doctor> {
+    // Check if email already exists
+    const existingDoctor = await this.doctorsRepository.findOne({
+      where: { email: dto.email },
+    });
+    
+    if (existingDoctor) {
+      throw new BadRequestException(
+        `A doctor with email ${dto.email} already exists. Please use a different email address.`
+      );
+    }
+
+    // Also check if email exists in users table
+    const existingUser = await this.usersRepository.findOne({
+      where: { email: dto.email },
+    });
+    
+    if (existingUser) {
+      throw new BadRequestException(
+        `Email ${dto.email} is already in use by another user (${existingUser.role}). Please use a different email address.`
+      );
+    }
+    
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     
     // Create doctor record
