@@ -82,36 +82,43 @@ export class AppointmentsService {
     return appointment;
   }
 
-  async create(dto: CreateAppointmentDto, patient: User): Promise<Appointment> {
-    // Handle guest bookings vs logged-in users
-    const isGuest = dto.isGuest || !patient;
-    
-    const appointment = this.appointmentsRepository.create({
-      patientId: isGuest ? null : patient?.id,
-      doctorId: null, // No doctor assigned yet - admin will assign later
-      patientName: dto.name || patient?.name || 'Guest',
-      doctorName: null, // Will be set when admin assigns doctor
-      patientEmail: dto.email || patient?.email,
-      patientPhone: dto.phone || patient?.phone,
-      appointmentDate: dto.appointmentDate,
-      appointmentTime: dto.appointmentTime,
-      reason: dto.reason,
-      visitType: dto.visitType || 'Physical Visit',
-      specialty: dto.specialty,
-      location: dto.location,
-      additionalComment: dto.comment,
-      isUrgent: dto.isUrgent || false,
-      fee: 0, // Will be set when doctor is assigned
-      status: AppointmentStatus.PENDING,
-      isConflicted: false,
-    });
+  async create(dto: CreateAppointmentDto, patient?: User): Promise<Appointment> {
+    try {
+      // Handle guest bookings vs logged-in users
+      const isGuest = dto.isGuest || !patient;
+      
+      const appointment = this.appointmentsRepository.create({
+        patientId: isGuest ? null : patient?.id,
+        doctorId: null, // No doctor assigned yet - admin will assign later
+        patientName: dto.name || patient?.name || 'Guest',
+        doctorName: null, // Will be set when admin assigns doctor
+        patientEmail: dto.email || patient?.email,
+        patientPhone: dto.phone || patient?.phone,
+        appointmentDate: dto.appointmentDate,
+        appointmentTime: dto.appointmentTime,
+        reason: dto.reason,
+        visitType: dto.visitType || 'Physical Visit',
+        specialty: dto.specialty,
+        location: dto.location,
+        additionalComment: dto.comment,
+        isUrgent: dto.isUrgent || false,
+        fee: 0, // Will be set when doctor is assigned
+        status: AppointmentStatus.PENDING,
+        isConflicted: false,
+      });
 
-    const saved = await this.appointmentsRepository.save(appointment);
+      const saved = await this.appointmentsRepository.save(appointment);
 
-    // No chat conversation created until doctor is assigned
-    // Admin/Appointment Officer will assign doctor and create conversation
+      // No chat conversation created until doctor is assigned
+      // Admin/Appointment Officer will assign doctor and create conversation
 
-    return saved;
+      return saved;
+    } catch (error) {
+      console.error('Error creating appointment:', error);
+      throw new BadRequestException(
+        `Failed to create appointment: ${error.message || 'Unknown error'}`
+      );
+    }
   }
 
   async update(id: string, dto: UpdateAppointmentDto, currentUser: User): Promise<Appointment> {

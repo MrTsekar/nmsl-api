@@ -43,16 +43,16 @@ export class Appointment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ nullable: true })
   patientId: string;
 
-  @Column()
+  @Column({ nullable: true })
   doctorId: string;
 
   @Column()
   patientName: string;
 
-  @Column()
+  @Column({ nullable: true })
   doctorName: string;
 
   @Column({ type: 'date' })
