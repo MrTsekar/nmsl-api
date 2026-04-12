@@ -82,62 +82,67 @@ export async function seedDatabase(dataSource: DataSource) {
   
   console.log('✅ Checked/created appointment officers');
 
-  // 2. Create Doctors
+  // 2. Create Doctors - ALL LOCATIONS & SPECIALTIES
   const doctorRepository = dataSource.getRepository(Doctor);
   const doctorAvailabilityRepository = dataSource.getRepository(DoctorAvailability);
   
   const doctors = [
-    {
-      name: 'Dr. Ken Wu',
-      email: 'ken.wu@nmsl.app',
-      specialty: 'General Practice',
-      qualifications: 'MBBS, FMCGP',
-      location: 'Lagos',
-      state: 'Lagos',
-      phone: '+234 805 111 2233',
-    },
-    {
-      name: 'Dr. Sarah Chen',
-      email: 'sarah.chen@nmsl.app',
-      specialty: 'Cardiology',
-      qualifications: 'MBBS, MD (Cardiology), FACC',
-      location: 'Abuja',
-      state: 'FCT',
-      phone: '+234 806 222 3344',
-    },
-    {
-      name: 'Dr. Amina Yusuf',
-      email: 'amina.yusuf@nmsl.app',
-      specialty: 'Pediatrics',
-      qualifications: 'MBBS, FWACP (Pediatrics)',
-      location: 'Kaduna',
-      state: 'Kaduna',
-      phone: '+234 807 333 4455',
-    },
-    {
-      name: 'Dr. Chidi Okafor',
-      email: 'chidi.okafor@nmsl.app',
-      specialty: 'Orthopedics',
-      qualifications: 'MBBS, FWACS (Orthopedics)',
-      location: 'Port Harcourt',
-      state: 'Rivers',
-      phone: '+234 808 444 5566',
-    },
-    {
-      name: 'Dr. Fatima Abubakar',
-      email: 'fatima.abubakar@nmsl.app',
-      specialty: 'Gynecology',
-      qualifications: 'MBBS, FWACS (Obstetrics & Gynecology)',
-      location: 'Benin',
-      state: 'Edo',
-      phone: '+234 809 555 6677',
-    },
+    // ABUJA Doctors
+    { name: 'Dr. Muhammad Ibrahim', email: 'muhammad. ibrahim@nmsl.app', specialty: 'General Medicine', qualifications: 'MBBS, FMCGP', location: 'ABUJA', state: 'FCT', phone: '+234 805 111 0001' },
+    { name: 'Dr. Sarah Adeyemi', email: 'sarah.adeyemi@nmsl.app', specialty: 'Cardiology', qualifications: 'MBBS, MD (Cardiology)', location: 'ABUJA', state: 'FCT', phone: '+234 805 111 0002' },
+    { name: 'Dr. Grace Okonkwo', email: 'grace.okonkwo@nmsl.app', specialty: 'Pediatrics', qualifications: 'MBBS, FWACP (Pediatrics)', location: 'ABUJA', state: 'FCT', phone: '+234 805 111 0003' },
+    { name: 'Dr. James Oluwole', email: 'james.oluwole@nmsl.app', specialty: 'Obstetrics & Gynecology', qualifications: 'MBBS, FWACS (O&G)', location: 'ABUJA', state: 'FCT', phone: '+234 805 111 0004' },
+    { name: 'Dr. Ahmed Bello', email: 'ahmed.bello@nmsl.app', specialty: 'Orthopedic Surgery', qualifications: 'MBBS, FWACS (Orthopedics)', location: 'ABUJA', state: 'FCT', phone: '+234 805 111 0005' },
+    { name: 'Dr. Chioma Nwosu', email: 'chioma.nwosu@nmsl.app', specialty: 'Dermatology', qualifications: 'MBBS, FWACP (Dermatology)', location: 'ABUJA', state: 'FCT', phone: '+234 805 111 0006' },
+    { name: 'Dr. Tunde Bakare', email: 'tunde.bakare@nmsl.app', specialty: 'Neurology', qualifications: 'MBBS, FWACP (Neurology)', location: 'ABUJA', state: 'FCT', phone: '+234 805 111 0007' },
+    { name: 'Dr. Amina Yusuf', email: 'amina.yusuf@nmsl.app', specialty: 'Ophthalmology', qualifications: 'MBBS, FMCOphth', location: 'ABUJA', state: 'FCT', phone: '+234 805 111 0008' },
+    
+    // LAGOS Doctors
+    { name: 'Dr. Adeola Williams', email: 'adeola.williams@nmsl.app', specialty: 'General Medicine', qualifications: 'MBBS, FMCGP', location: 'LAGOS', state: 'Lagos', phone: '+234 806 222 0001' },
+    { name: 'Dr. Emeka Obi', email: 'emeka.obi@nmsl.app', specialty: 'ENT (Ear, Nose & Throat)', qualifications: 'MBBS, FWACS (ENT)', location: 'LAGOS', state: 'Lagos', phone: '+234 806 222 0002' },
+    { name: 'Dr. Fatima Lawal', email: 'fatima.lawal@nmsl.app', specialty: 'Psychiatry', qualifications: 'MBBS, FMCPsych', location: 'LAGOS', state: 'Lagos', phone: '+234 806 222 0003' },
+    { name: 'Dr. Chidi Okafor', email: 'chidi.okafor@nmsl.app', specialty: 'Radiology', qualifications: 'MBBS, FWACR', location: 'LAGOS', state: 'Lagos', phone: '+234 806 222 0004' },
+    { name: 'Dr. Blessing Eze', email: 'blessing.eze@nmsl.app', specialty: 'Internal Medicine', qualifications: 'MBBS, FWACP', location: 'LAGOS', state: 'Lagos', phone: '+234 806 222 0005' },
+    { name: 'Dr. Yusuf Mohammed', email: 'yusuf.mohammed@nmsl.app', specialty: 'Dentistry', qualifications: 'BDS, FMCDS', location: 'LAGOS', state: 'Lagos', phone: '+234 806 222 0006' },
+    { name: 'Dr. Jennifer Afolabi', email: 'jennifer.afolabi@nmsl.app', specialty: 'Emergency Medicine', qualifications: 'MBBS, FWACEM', location: 'LAGOS', state: 'Lagos', phone: '+234 806 222 0007' },
+    
+    // BENIN Doctors
+    { name: 'Dr. Peter Osagie', email: 'peter.osagie@nmsl.app', specialty: 'General Medicine', qualifications: 'MBBS, FMCGP', location: 'BENIN', state: 'Edo', phone: '+234 807 333 0001' },
+    { name: 'Dr. Ngozi Okoro', email: 'ngozi.okoro@nmsl.app', specialty: 'Cardiology', qualifications: 'MBBS, MD (Cardiology)', location: 'BENIN', state: 'Edo', phone: '+234 807 333 0002' },
+    { name: 'Dr. Samuel Odigie', email: 'samuel.odigie@nmsl.app', specialty: 'Pediatrics', qualifications: 'MBBS, FWACP (Pediatrics)', location: 'BENIN', state: 'Edo', phone: '+234 807 333 0003' },
+    { name: 'Dr. Rose Ighalo', email: 'rose.ighalo@nmsl.app', specialty: 'Obstetrics & Gynecology', qualifications: 'MBBS, FWACS (O&G)', location: 'BENIN', state: 'Edo', phone: '+234 807 333 0004' },
+    
+    // KADUNA Doctors
+    { name: 'Dr. Hassan Danjuma', email: 'hassan.danjuma@nmsl.app', specialty: 'General Medicine', qualifications: 'MBBS, FMCGP', location: 'KADUNA', state: 'Kaduna', phone: '+234 808 444 0001' },
+    { name: 'Dr. Ruth Gideon', email: 'ruth.gideon@nmsl.app', specialty: 'Orthopedic Surgery', qualifications: 'MBBS, FWACS (Orthopedics)', location: 'KADUNA', state: 'Kaduna', phone: '+234 808 444 0002' },
+    { name: 'Dr. Suleiman Abubakar', email: 'suleiman.abubakar@nmsl.app', specialty: 'Dermatology', qualifications: 'MBBS, FWACP (Dermatology)', location: 'KADUNA', state: 'Kaduna', phone: '+234 808 444 0003' },
+    { name: 'Dr. Deborah Yakubu', email: 'deborah.yakubu@nmsl.app', specialty: 'Neurology', qualifications: 'MBBS, FWACP (Neurology)', location: 'KADUNA', state: 'Kaduna', phone: '+234 808 444 0004' },
+    
+    // PORT_HARCOURT Doctors
+    { name: 'Dr. Barth Nnaji', email: 'barth.nnaji@nmsl.app', specialty: 'General Medicine', qualifications: 'MBBS, FMCGP', location: 'PORT_HARCOURT', state: 'Rivers', phone: '+234 809 555 0001' },
+    { name: 'Dr. Ifeoma Nwankwo', email: 'ifeoma.nwankwo@nmsl.app', specialty: 'Ophthalmology', qualifications: 'MBBS, FMCOphth', location: 'PORT_HARCOURT', state: 'Rivers', phone: '+234 809 555 0002' },
+    { name: 'Dr. Victor Amadi', email: 'victor.amadi@nmsl.app', specialty: 'ENT (Ear, Nose & Throat)', qualifications: 'MBBS, FWACS (ENT)', location: 'PORT_HARCOURT', state: 'Rivers', phone: '+234 809 555 0003' },
+    { name: 'Dr. Mercy Ogbonna', email: 'mercy.ogbonna@nmsl.app', specialty: 'Psychiatry', qualifications: 'MBBS, FMCPsych', location: 'PORT_HARCOURT', state: 'Rivers', phone: '+234 809 555 0004' },
+    
+    // WARRI Doctors  
+    { name: 'Dr. Tony Okpako', email: 'tony.okpako@nmsl.app', specialty: 'General Medicine', qualifications: 'MBBS, FMCGP', location: 'WARRI', state: 'Delta', phone: '+234 810 666 0001' },
+    { name: 'Dr. Evelyn Ariyo', email: 'evelyn.ariyo@nmsl.app', specialty: 'Radiology', qualifications: 'MBBS, FWACR', location: 'WARRI', state: 'Delta', phone: '+234 810 666 0002' },
+    { name: 'Dr. Daniel Ughwujabo', email: 'daniel.ughwujabo@nmsl.app', specialty: 'Internal Medicine', qualifications: 'MBBS, FWACP', location: 'WARRI', state: 'Delta', phone: '+234 810 666 0003' },
+    { name: 'Dr. Patience Akpore', email: 'patience.akpore@nmsl.app', specialty: 'Dentistry', qualifications: 'BDS, FMCDS', location: 'WARRI', state: 'Delta', phone: '+234 810 666 0004' },
+    { name: 'Dr. John Eboh', email: 'john.eboh@nmsl.app', specialty: 'Emergency Medicine', qualifications: 'MBBS, FWACEM', location: 'WARRI', state: 'Delta', phone: '+234 810 666 0005' },
   ];
 
   const doctorPassword = await bcrypt.hash('Doctor@123', 10);
   
   const savedDoctors: Doctor[] = [];
   for (const doc of doctors) {
+    // Check if doctor already exists
+    const existing = await doctorRepository.findOne({ where: { email: doc.email } });
+    if (existing) {
+      console.log(`⏭️  Doctor ${doc.name} already exists, skipping...`);
+      continue;
+    }
+    
     const doctor = doctorRepository.create({
       ...doc,
       password: doctorPassword,
@@ -160,7 +165,7 @@ export async function seedDatabase(dataSource: DataSource) {
     await doctorAvailabilityRepository.save(availability);
   }
   
-  console.log('✅ Created doctors with availability schedules');
+  console.log(`✅ Created ${savedDoctors.length} doctors across all locations and specialties`);
 
   // 3. Create Sample Patients
   const patientPassword = await bcrypt.hash('Patient@123', 10);
