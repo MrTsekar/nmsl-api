@@ -361,24 +361,6 @@ export async function seedDatabase(dataSource: DataSource) {
       isUrgent: false,
       isConflicted: false,
     },
-    {
-      patientId: patientEntities[1].id,
-      doctorId: savedDoctors[1].id,
-      patientName: patientEntities[1].name,
-      patientEmail: patientEntities[1].email,
-      patientPhone: patientEntities[1].phone,
-      doctorName: savedDoctors[1].name,
-      appointmentDate: tomorrowStr,
-      appointmentTime: '10:00',
-      status: AppointmentStatus.PENDING,
-      reason: 'Cardiac consultation',
-      specialty: savedDoctors[1].specialty,
-      location: savedDoctors[1].location,
-      fee: 0,
-      visitType: 'Telemedicine',
-      isUrgent: false,
-      isConflicted: false,
-    },
   ];
 
   await appointmentRepository.save(appointments);
