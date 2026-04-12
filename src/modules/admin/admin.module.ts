@@ -8,6 +8,7 @@ import { AdminController } from './controllers/admin.controller';
 import { AdminService } from './services/admin.service';
 import { UsersModule } from '../users/users.module';
 import { DoctorsModule } from '../doctors/doctors.module';
+import { AppointmentsModule } from '../appointments/appointments.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuditModule } from '../audit/audit.module';
 
@@ -16,6 +17,7 @@ import { AuditModule } from '../audit/audit.module';
     TypeOrmModule.forFeature([User, Doctor, DoctorAvailability, Appointment]),
     UsersModule,
     DoctorsModule,
+    AppointmentsModule,
     NotificationsModule,
     AuditModule,
   ],

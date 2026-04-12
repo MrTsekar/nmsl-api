@@ -10,6 +10,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  HttpException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,12 +19,16 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { AdminService } from '../services/admin.service';
+import { AppointmentsService } from '../../appointments/services/appointments.service';
+import { AppointmentLockService } from '../../appointments/services/appointment-lock.service';
 import { CreateDoctorDto } from '../../doctors/dto/create-doctor.dto';
 import { CreateAdminDto } from '../dto/create-admin.dto';
 import { ChangeAdminPasswordDto } from '../dto/change-admin-password.dto';
 import { UpdateUserEmailDto } from '../dto/update-user-email.dto';
 import { UpdateAppointmentStatusDto, RescheduleAppointmentAdminDto } from '../dto/update-appointment.dto';
 import { UpdateAvailabilityDto } from '../../doctors/dto/update-availability.dto';
+import { LockAppointmentDto } from '../../appointments/dto/lock-appointment.dto';
+import { UnlockAppointmentDto } from '../../appointments/dto/unlock-appointment.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
@@ -36,7 +41,11 @@ import { DoctorSpecialty } from '../../doctors/dto/create-doctor.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly appointmentsService: AppointmentsService,
+    private readonly appointmentLockService: AppointmentLockService,
+  ) {}
 
   // ─── KPIs ────────────────────────────────────────────────────────────────
   @Get('kpis')
@@ -197,6 +206,86 @@ export class AdminController {
     @CurrentUser() user: User,
   ) {
     return this.adminService.rescheduleAppointment(id, dto, user);
+  }
+
+  @Post('appointments/:id/lock')
+  @Roles(UserRole.ADMIN, UserRole.APPOINTMENT_OFFICER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Lock appointment for processing',
+    description:
+      'Lock an appointment to prevent other officers from working on it. Admins can override existing locks.',
+  })
+  async lockAppointment(
+    @Param('id') id: string,
+    @Body() dto: LockAppointmentDto,
+    @CurrentUser() user: User,
+  ) {
+    const isAdmin = user.role === UserRole.ADMIN;
+    const lockInfo = await this.appointmentLockService.acquireLock(
+      id,
+      dto.officerEmail || user.email,
+      dto.isAdmin || isAdmin,
+      user.name,
+    );
+
+    // Update appointment entity with lock info
+    await this.appointmentsService.updateLockFields(
+      id,
+      lockInfo.lockedBy,
+      lockInfo.lockedAt,
+    );
+
+    const appointment = await this.appointmentsService.findById(id);
+    return {
+      ...appointment,
+      lockInfo: {
+        ...lockInfo,
+        remainingSeconds: await this.appointmentLockService.getRemainingTime(id),
+      },
+    };
+  }
+
+  @Post('appointments/:id/unlock')
+  @Roles(UserRole.ADMIN, UserRole.APPOINTMENT_OFFICER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Unlock appointment',
+    description:
+      'Release the lock on an appointment. Officers can only unlock their own appointments unless they are admins.',
+  })
+  async unlockAppointment(
+    @Param('id') id: string,
+    @Body() dto: UnlockAppointmentDto,
+    @CurrentUser() user: User,
+  ) {
+    const isAdmin = user.role === UserRole.ADMIN;
+    const officerEmail = dto.officerEmail || user.email;
+
+    // Verify permission to unlock
+    const canUnlock = await this.appointmentLockService.canUnlock(
+      id,
+      officerEmail,
+      isAdmin,
+    );
+
+    if (!canUnlock) {
+      throw new HttpException(
+        'You do not have permission to unlock this appointment',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    await this.appointmentLockService.releaseLock(id);
+
+    // Clear lock fields in appointment entity
+    await this.appointmentsService.updateLockFields(id, null, null);
+
+    const appointment = await this.appointmentsService.findById(id);
+    return {
+      ...appointment,
+      lockInfo: null,
+    };
   }
 }
 
