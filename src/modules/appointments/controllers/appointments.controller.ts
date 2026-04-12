@@ -27,10 +27,9 @@ import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { User, UserRole } from '../../users/entities/user.entity';
+import { Request } from 'express';
 
 @ApiTags('Appointments')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('appointments')
 export class AppointmentsController {
   constructor(
@@ -39,6 +38,8 @@ export class AppointmentsController {
   ) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get appointments (filtered by role)' })
   findAll(
     @CurrentUser() user: User,
@@ -53,19 +54,24 @@ export class AppointmentsController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get appointment by ID' })
   findOne(@Param('id') id: string) {
     return this.appointmentsService.findById(id);
   }
 
   @Post()
-  @Roles(UserRole.PATIENT)
-  @ApiOperation({ summary: 'Book a new appointment (patient only)' })
-  create(@Body() dto: CreateAppointmentDto, @CurrentUser() user: User) {
+  @ApiOperation({ summary: 'Book a new appointment (guest or authenticated)' })
+  create(@Body() dto: CreateAppointmentDto, @Req() req: Request) {
+    // Extract user from request if authenticated (optional)
+    const user = req['user'] as User | undefined;
     return this.appointmentsService.create(dto, user);
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update appointment status' })
   update(
     @Param('id') id: string,
@@ -76,6 +82,8 @@ export class AppointmentsController {
   }
 
   @Patch(':id/reschedule')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Reschedule appointment' })
   reschedule(
     @Param('id') id: string,
@@ -86,6 +94,8 @@ export class AppointmentsController {
   }
 
   @Patch(':id/confirm')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @Roles(UserRole.DOCTOR, UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Confirm appointment (doctor/admin)' })
@@ -98,6 +108,8 @@ export class AppointmentsController {
   }
 
   @Patch(':id/cancel')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cancel appointment' })
   async cancel(@Param('id') id: string, @CurrentUser() user: User) {
@@ -109,6 +121,8 @@ export class AppointmentsController {
   }
 
   @Patch(':id/complete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @Roles(UserRole.DOCTOR, UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Mark appointment as completed (doctor/admin)' })
@@ -121,6 +135,8 @@ export class AppointmentsController {
   }
 
   @Patch(':id/lock')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @Roles(UserRole.ADMIN, UserRole.APPOINTMENT_OFFICER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

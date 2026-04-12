@@ -5,11 +5,12 @@ import {
   Patch,
   Param,
   Body,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { DoctorsService } from '../services/doctors.service';
 import { UpdateAvailabilityDto } from '../dto/update-availability.dto';
 import { MarkUnavailableDto } from '../dto/mark-unavailable.dto';
@@ -24,6 +25,40 @@ import { User, UserRole } from '../../users/entities/user.entity';
 @Controller('doctors')
 export class DoctorsController {
   constructor(private readonly doctorsService: DoctorsService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Get all doctors (with optional filters)' })
+  @ApiQuery({ name: 'location', required: false, example: 'Abuja' })
+  @ApiQuery({ name: 'specialty', required: false, example: 'General Medicine' })
+  findAll(
+    @Query('location') location?: string,
+    @Query('specialty') specialty?: string,
+  ) {
+    return this.doctorsService.findAll({ location, specialty });
+  }
+
+  @Get('locations')
+  @ApiOperation({ summary: 'Get all hospital locations' })
+  getLocations() {
+    return this.doctorsService.getLocations();
+  }
+
+  @Get('specialties')
+  @ApiOperation({ summary: 'Get all medical specialties' })
+  getSpecialties() {
+    return this.doctorsService.getSpecialties();
+  }
+
+  @Get('available-slots')
+  @ApiOperation({ summary: 'Get available time slots for a doctor on a specific date' })
+  @ApiQuery({ name: 'doctorId', required: true })
+  @ApiQuery({ name: 'date', required: true, example: '2026-04-15' })
+  getAvailableSlots(
+    @Query('doctorId') doctorId: string,
+    @Query('date') date: string,
+  ) {
+    return this.doctorsService.getAvailableSlots(doctorId, date);
+  }
 
   @Get('availability/:doctorId')
   @ApiOperation({ summary: "Get doctor's availability by ID" })

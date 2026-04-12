@@ -122,16 +122,24 @@ export class AppointmentsService {
       ];
     }
 
+    // Handle guest bookings vs logged-in users
+    const isGuest = dto.isGuest || !patient;
+    
     const appointment = this.appointmentsRepository.create({
-      patientId: patient.id,
+      patientId: isGuest ? null : patient.id,
       doctorId: doctor.id,
-      patientName: patient.name,
+      patientName: dto.name || patient?.name || 'Guest',
       doctorName: doctor.name,
+      patientEmail: dto.email || patient?.email,
+      patientPhone: dto.phone || patient?.phone,
       appointmentDate: dto.appointmentDate,
       appointmentTime: dto.appointmentTime,
       reason: dto.reason,
-      specialty: doctor.specialty || 'General Practice',
-      location: doctor.location,
+      visitType: dto.visitType || 'Physical Visit',
+      specialty: dto.specialty || doctor.specialty || 'General Practice',
+      location: dto.location || doctor.location,
+      additionalComment: dto.comment,
+      isUrgent: dto.isUrgent || false,
       fee: doctor.consultationFee || 0,
       status: AppointmentStatus.PENDING,
       isConflicted: false,
@@ -151,16 +159,18 @@ export class AppointmentsService {
       }
     }
 
-    await this.chatService.createConversation({
-      appointmentId: saved.id,
-      patientId: patient.id,
-      doctorId: doctor.id,
-      patientName: patient.name,
-      doctorName: doctor.name,
-    });
+    // Only create conversation if patient is logged in
+    if (!isGuest && patient) {
+      await this.chatService.createConversation({
+        appointmentId: saved.id,
+        patientId: patient.id,
+        doctorId: doctor.id,
+        patientName: patient.name,
+        doctorName: doctor.name,
+      });
+    }
 
-    // No notification - appointments are visible in dashboard
-    // Real-time update via WebSocket only
+    // Real-time update via WebSocket
     this.chatGateway.emitAppointmentUpdate(doctor.id, saved);
 
     return saved;

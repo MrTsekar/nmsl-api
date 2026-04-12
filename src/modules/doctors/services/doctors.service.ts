@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
+import { Doctor } from '../entities/doctor.entity';
 import { DoctorAvailability } from '../entities/doctor-availability.entity';
 import { Appointment, AppointmentStatus } from '../../appointments/entities/appointment.entity';
 import { UpdateAvailabilityDto } from '../dto/update-availability.dto';
@@ -21,6 +22,8 @@ import { ChatGateway } from '../../chat/gateways/chat.gateway';
 @Injectable()
 export class DoctorsService {
   constructor(
+    @InjectRepository(Doctor)
+    private readonly doctorRepository: Repository<Doctor>,
     @InjectRepository(DoctorAvailability)
     private readonly availabilityRepository: Repository<DoctorAvailability>,
     @InjectRepository(Appointment)
@@ -232,5 +235,120 @@ export class DoctorsService {
       unavailableSlots: [],
     });
     return this.availabilityRepository.save(availability);
+  }
+
+  // Appointment booking endpoints
+  async findAll(filters?: { location?: string; specialty?: string }) {
+    const query = this.doctorRepository.createQueryBuilder('doctor')
+      .where('doctor.isActive = :isActive', { isActive: true })
+      .select([
+        'doctor.id',
+        'doctor.name',
+        'doctor.email',
+        'doctor.specialty',
+        'doctor.location',
+        'doctor.phone',
+        'doctor.qualifications',
+        'doctor.avatar',
+      ]);
+
+    if (filters?.location) {
+      query.andWhere('doctor.location = :location', { location: filters.location });
+    }
+
+    if (filters?.specialty) {
+      query.andWhere('doctor.specialty = :specialty', { specialty: filters.specialty });
+    }
+
+    const doctors = await query.getMany();
+
+    return {
+      success: true,
+      data: doctors,
+      count: doctors.length,
+    };
+  }
+
+  async getLocations() {
+    const locations = await this.doctorRepository
+      .createQueryBuilder('doctor')
+      .select('DISTINCT doctor.location', 'location')
+      .where('doctor.isActive = :isActive', { isActive: true })
+      .andWhere('doctor.location IS NOT NULL')
+      .getRawMany();
+
+    return {
+      success: true,
+      data: locations.map(l => l.location),
+    };
+  }
+
+  async getSpecialties() {
+    const specialties = await this.doctorRepository
+      .createQueryBuilder('doctor')
+      .select('DISTINCT doctor.specialty', 'specialty')
+      .where('doctor.isActive = :isActive', { isActive: true })
+      .andWhere('doctor.specialty IS NOT NULL')
+      .getRawMany();
+
+    return {
+      success: true,
+      data: specialties.map(s => s.specialty),
+    };
+  }
+
+  async getAvailableSlots(doctorId: string, date: string) {
+    const doctor = await this.doctorRepository.findOne({ where: { id: doctorId } });
+    if (!doctor) {
+      throw new NotFoundException('Doctor not found');
+    }
+
+    const availability = await this.availabilityRepository.findOne({
+      where: { doctorId },
+    });
+
+    if (!availability) {
+      return {
+        success: true,
+        data: [],
+        message: 'No availability configured for this doctor',
+      };
+    }
+
+    const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
+
+    if (!availability.availableDays.includes(dayOfWeek)) {
+      return {
+        success: true,
+        data: [],
+        message: `Doctor is not available on ${dayOfWeek}`,
+      };
+    }
+
+    // Get all time slots
+    const allSlots = availability.timeSlots || [];
+
+    // Filter out booked slots
+    const bookedTimes = (availability.bookedSlots || [])
+      .filter(s => s.date === date)
+      .map(s => s.time);
+
+    // Filter out unavailable slots
+    const unavailableTimes = (availability.unavailableSlots || [])
+      .filter(s => s.date === date)
+      .map(s => s.time);
+
+    // Get available slots
+    const availableSlots = allSlots.filter(
+      time => !bookedTimes.includes(time) && !unavailableTimes.includes(time)
+    );
+
+    return {
+      success: true,
+      data: availableSlots,
+      doctorName: doctor.name,
+      date,
+      dayOfWeek,
+    };
   }
 }

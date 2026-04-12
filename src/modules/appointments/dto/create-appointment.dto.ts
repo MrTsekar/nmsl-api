@@ -2,11 +2,20 @@ import {
   IsUUID,
   IsDateString,
   IsString,
+  IsEmail,
+  IsOptional,
+  IsBoolean,
+  IsEnum,
   MinLength,
   MaxLength,
   Matches,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+enum VisitType {
+  PHYSICAL = 'Physical Visit',
+  TELEMEDICINE = 'Telemedicine',
+}
 
 export class CreateAppointmentDto {
   @ApiProperty({ example: 'uuid-of-doctor' })
@@ -29,4 +38,49 @@ export class CreateAppointmentDto {
   @MinLength(10)
   @MaxLength(500)
   reason: string;
+
+  // Frontend booking form fields
+  @ApiProperty({ enum: VisitType, example: 'Physical Visit' })
+  @IsEnum(VisitType)
+  visitType: string;
+
+  @ApiProperty({ example: 'Abuja' })
+  @IsString()
+  location: string;
+
+  @ApiProperty({ example: 'General Medicine' })
+  @IsString()
+  specialty: string;
+
+  // Guest booking fields (when user not logged in)
+  @ApiPropertyOptional({ example: 'John Doe' })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional({ example: 'john@example.com' })
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @ApiPropertyOptional({ example: '+2348012345678' })
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @ApiPropertyOptional({ example: 'Need urgent consultation' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  comment?: string;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @IsBoolean()
+  isUrgent?: boolean;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @IsBoolean()
+  isGuest?: boolean;
 }
