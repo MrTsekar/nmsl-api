@@ -60,50 +60,56 @@ export class AuditService {
   }
 
   async getOfficerStatistics(startDate?: string, endDate?: string) {
-    const query = this.auditLogRepository
-      .createQueryBuilder('audit')
-      .select('audit.performedBy', 'officerEmail')
-      .addSelect('audit.performedByName', 'officerName')
-      .addSelect('COUNT(*)', 'totalProcessed')
-      .addSelect(
-        "SUM(CASE WHEN audit.action = 'accepted' THEN 1 ELSE 0 END)",
-        'accepted',
-      )
-      .addSelect(
-        "SUM(CASE WHEN audit.action = 'rejected' THEN 1 ELSE 0 END)",
-        'rejected',
-      )
-      .addSelect(
-        "SUM(CASE WHEN audit.action = 'rescheduled' THEN 1 ELSE 0 END)",
-        'rescheduled',
-      )
-      .addSelect(
-        "SUM(CASE WHEN audit.action = 'completed' THEN 1 ELSE 0 END)",
-        'completed',
-      )
-      .addSelect('MAX(audit.performedAt)', 'lastActive')
-      .groupBy('audit.performedBy')
-      .addGroupBy('audit.performedByName')
-      .orderBy('totalProcessed', 'DESC');
-
+    // Build the WHERE clause for date filtering
+    let dateFilter = '';
+    const params: any[] = [];
+    
     if (startDate || endDate) {
-      query.where('audit.performedAt BETWEEN :startDate AND :endDate', {
-        startDate: startDate ? new Date(startDate) : new Date(0),
-        endDate: endDate ? new Date(endDate) : new Date(),
-      });
+      dateFilter = 'WHERE audit.performedAt BETWEEN $1 AND $2';
+      params.push(startDate ? new Date(startDate) : new Date(0));
+      params.push(endDate ? new Date(endDate) : new Date());
     }
 
-    const statistics = await query.getRawMany();
+    // Use a CTE to get only the latest action per appointment
+    // This prevents counting an appointment as both 'accepted' and 'rescheduled'
+    const query = `
+      WITH latest_actions AS (
+        SELECT DISTINCT ON (audit."appointmentId")
+          audit.id,
+          audit."appointmentId",
+          audit.action,
+          audit."performedBy",
+          audit."performedByName",
+          audit."performedAt"
+        FROM audit_logs audit
+        ${dateFilter}
+        ORDER BY audit."appointmentId", audit."performedAt" DESC
+      )
+      SELECT
+        la."performedBy" as "officerEmail",
+        la."performedByName" as "officerName",
+        COUNT(DISTINCT la."appointmentId")::int as "totalProcessed",
+        SUM(CASE WHEN la.action = 'accepted' THEN 1 ELSE 0 END)::int as "accepted",
+        SUM(CASE WHEN la.action = 'rejected' THEN 1 ELSE 0 END)::int as "rejected",
+        SUM(CASE WHEN la.action = 'rescheduled' THEN 1 ELSE 0 END)::int as "rescheduled",
+        SUM(CASE WHEN la.action = 'completed' THEN 1 ELSE 0 END)::int as "completed",
+        MAX(la."performedAt") as "lastActive"
+      FROM latest_actions la
+      GROUP BY la."performedBy", la."performedByName"
+      ORDER BY "totalProcessed" DESC
+    `;
+
+    const statistics = await this.auditLogRepository.query(query, params);
 
     return {
       statistics: statistics.map((stat) => ({
         officerEmail: stat.officerEmail,
         officerName: stat.officerName,
-        totalProcessed: parseInt(stat.totalProcessed),
-        accepted: parseInt(stat.accepted),
-        rejected: parseInt(stat.rejected),
-        rescheduled: parseInt(stat.rescheduled),
-        completed: parseInt(stat.completed),
+        totalProcessed: stat.totalProcessed,
+        accepted: stat.accepted,
+        rejected: stat.rejected,
+        rescheduled: stat.rescheduled,
+        completed: stat.completed,
         lastActive: stat.lastActive,
       })),
       total: statistics.length,
