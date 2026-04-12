@@ -87,15 +87,15 @@ export async function seedDatabase(dataSource: DataSource) {
   const doctorAvailabilityRepository = dataSource.getRepository(DoctorAvailability);
   
   const doctors = [
-    { name: 'Dr. Muhammad Ibrahim', email: 'muhammad.ibrahim@nmsl.app', specialty: 'General Medicine', qualifications: 'MBBS, FMCGP', location: 'ABUJA', state: 'FCT', phone: '+234 805 111 0001' },
+    { name: 'Dr. Muhammad Ibrahim', email: 'muhammad.ibrahim@nmsl.app', specialty: 'General Practice', qualifications: 'MBBS, FMCGP', location: 'ABUJA', state: 'FCT', phone: '+234 805 111 0001' },
     { name: 'Dr. Sarah Adeyemi', email: 'sarah.adeyemi@nmsl.app', specialty: 'Cardiology', qualifications: 'MBBS, MD', location: 'LAGOS', state: 'Lagos', phone: '+234 806 222 0001' },
     { name: 'Dr. Grace Okonkwo', email: 'grace.okonkwo@nmsl.app', specialty: 'Pediatrics', qualifications: 'MBBS, FWACP', location: 'BENIN', state: 'Edo', phone: '+234 807 333 0001' },
-    { name: 'Dr. James Oluwole', email: 'james.oluwole@nmsl.app', specialty: 'Obstetrics & Gynecology', qualifications: 'MBBS, FWACS', location: 'KADUNA', state: 'Kaduna', phone: '+234 808 444 0001' },
-    { name: 'Dr. Ahmed Bello', email: 'ahmed.bello@nmsl.app', specialty: 'Orthopedic Surgery', qualifications: 'MBBS, FWACS', location: 'PORT_HARCOURT', state: 'Rivers', phone: '+234 809 555 0001' },
+    { name: 'Dr. James Oluwole', email: 'james.oluwole@nmsl.app', specialty: 'Gynecology', qualifications: 'MBBS, FWACS', location: 'KADUNA', state: 'Kaduna', phone: '+234 808 444 0001' },
+    { name: 'Dr. Ahmed Bello', email: 'ahmed.bello@nmsl.app', specialty: 'Orthopedics', qualifications: 'MBBS, FWACS', location: 'PORT_HARCOURT', state: 'Rivers', phone: '+234 809 555 0001' },
     { name: 'Dr. Chioma Nwosu', email: 'chioma.nwosu@nmsl.app', specialty: 'Dermatology', qualifications: 'MBBS, FWACP', location: 'WARRI', state: 'Delta', phone: '+234 810 666 0001' },
     { name: 'Dr. Tunde Bakare', email: 'tunde.bakare@nmsl.app', specialty: 'Neurology', qualifications: 'MBBS, FWACP', location: 'ABUJA', state: 'FCT', phone: '+234 805 111 0002' },
     { name: 'Dr. Amina Yusuf', email: 'amina.yusuf@nmsl.app', specialty: 'Ophthalmology', qualifications: 'MBBS, FMCOphth', location: 'LAGOS', state: 'Lagos', phone: '+234 806 222 0002' },
-    { name: 'Dr. Emeka Obi', email: 'emeka.obi@nmsl.app', specialty: 'ENT (Ear, Nose & Throat)', qualifications: 'MBBS, FWACS', location: 'BENIN', state: 'Edo', phone: '+234 807 333 0002' },
+    { name: 'Dr. Emeka Obi', email: 'emeka.obi@nmsl.app', specialty: 'ENT', qualifications: 'MBBS, FWACS', location: 'BENIN', state: 'Edo', phone: '+234 807 333 0002' },
     { name: 'Dr. Fatima Lawal', email: 'fatima.lawal@nmsl.app', specialty: 'Psychiatry', qualifications: 'MBBS, FMCPsych', location: 'KADUNA', state: 'Kaduna', phone: '+234 808 444 0002' },
     { name: 'Dr. Chidi Okafor', email: 'chidi.okafor@nmsl.app', specialty: 'Radiology', qualifications: 'MBBS, FWACR', location: 'PORT_HARCOURT', state: 'Rivers', phone: '+234 809 555 0002' },
     { name: 'Dr. Blessing Eze', email: 'blessing.eze@nmsl.app', specialty: 'Internal Medicine', qualifications: 'MBBS, FWACP', location: 'WARRI', state: 'Delta', phone: '+234 810 666 0002' },
