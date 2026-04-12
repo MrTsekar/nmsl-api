@@ -298,31 +298,49 @@ export class DoctorsService {
   }
 
   async getStandardTimeSlots(date: string) {
-    const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
-    
-    // Weekend check
-    if (dayOfWeek === 'Saturday' || dayOfWeek === 'Sunday') {
+    try {
+      // Validate date format
+      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        throw new BadRequestException('Invalid date format. Use YYYY-MM-DD');
+      }
+
+      const parsedDate = new Date(date + 'T00:00:00Z');
+      
+      if (isNaN(parsedDate.getTime())) {
+        throw new BadRequestException('Invalid date value');
+      }
+
+      const dayOfWeek = parsedDate.toLocaleDateString('en-US', { weekday: 'long' });
+      
+      // Weekend check
+      if (dayOfWeek === 'Saturday' || dayOfWeek === 'Sunday') {
+        return {
+          success: true,
+          data: [],
+          message: 'Hospital is closed on weekends',
+          date,
+          dayOfWeek,
+        };
+      }
+
+      // Standard hospital hours: 8 AM - 5 PM (hourly slots)
+      const standardSlots = [
+        '08:00', '09:00', '10:00', '11:00', 
+        '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'
+      ];
+
       return {
         success: true,
-        data: [],
-        message: 'Hospital is closed on weekends',
+        data: standardSlots,
         date,
         dayOfWeek,
+        message: 'Doctor will be assigned by admin/appointment officer',
       };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to process date: ' + error.message);
     }
-
-    // Standard hospital hours: 8 AM - 5 PM (hourly slots)
-    const standardSlots = [
-      '08:00', '09:00', '10:00', '11:00', 
-      '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'
-    ];
-
-    return {
-      success: true,
-      data: standardSlots,
-      date,
-      dayOfWeek,
-      message: 'Doctor will be assigned by admin/appointment officer',
-    };
   }
 }
