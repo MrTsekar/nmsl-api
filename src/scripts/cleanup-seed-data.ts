@@ -47,7 +47,7 @@ async function cleanupSeedData() {
       `);
       console.log(`   Deleted ${deletedPatients[1]} patients`);
 
-      // 3. Delete seed doctors
+      // 3. Delete seed doctors (delete availability first, then doctors)
       console.log('🗑️  Deleting seed doctors...');
       const doctorEmails = [
         'muhammad.ibrahim@nmsl.app',
@@ -66,11 +66,28 @@ async function cleanupSeedData() {
         'jennifer.afolabi@nmsl.app',
       ];
       
-      const deletedDoctors = await queryRunner.query(
+      // First delete doctor_availability records
+      const deletedAvailability = await queryRunner.query(`
+        DELETE FROM doctor_availability 
+        WHERE "doctorId" IN (
+          SELECT id FROM doctors WHERE email = ANY($1)
+        )
+      `, [doctorEmails]);
+      console.log(`   Deleted ${deletedAvailability[1]} doctor availability records`);
+      
+      // Then delete from doctors table
+      const deletedDoctorsTable = await queryRunner.query(
+        `DELETE FROM doctors WHERE email = ANY($1)`,
+        [doctorEmails]
+      );
+      console.log(`   Deleted ${deletedDoctorsTable[1]} doctors from doctors table`);
+      
+      // Also delete from users table if they exist there
+      const deletedDoctorsUsers = await queryRunner.query(
         `DELETE FROM users WHERE email = ANY($1) AND role = 'doctor'`,
         [doctorEmails]
       );
-      console.log(`   Deleted ${deletedDoctors[1]} doctors`);
+      console.log(`   Deleted ${deletedDoctorsUsers[1]} doctors from users table`);
 
       // 4. Delete seed appointment officers
       console.log('🗑️  Deleting seed appointment officers...');
@@ -156,6 +173,9 @@ async function cleanupSeedData() {
 
       const boardCounts = await queryRunner.query(`SELECT COUNT(*) as count FROM board_members`);
       console.log(`   Board Members: ${boardCounts[0].count}`);
+
+      const doctorCounts = await queryRunner.query(`SELECT COUNT(*) as count FROM doctors`);
+      console.log(`   Doctors: ${doctorCounts[0].count}`);
 
     } catch (err) {
       console.error('❌ Error during cleanup, rolling back...');
