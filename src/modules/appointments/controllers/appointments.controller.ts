@@ -98,7 +98,10 @@ export class AppointmentsController {
   @ApiBearerAuth()
   @Roles(UserRole.DOCTOR, UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Confirm appointment (doctor/admin)' })
+  @ApiOperation({ 
+    summary: 'Confirm appointment (doctor/admin)',
+    description: 'DEPRECATED: Use /admin/appointments/:id/status instead. This endpoint does not create audit logs.'
+  })
   async confirm(@Param('id') id: string, @CurrentUser() user: User) {
     return this.appointmentsService.update(
       id,

@@ -3,7 +3,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AppointmentStatus } from '../../appointments/entities/appointment.entity';
 
 export class UpdateAppointmentStatusDto {
-  @ApiProperty({ enum: ['confirmed', 'rejected'] })
+  @ApiProperty({ 
+    enum: ['confirmed', 'rejected'],
+    description: 'confirmed = Accept the appointment | rejected = Reject the appointment'
+  })
   @IsEnum(['confirmed', 'rejected'])
   status: 'confirmed' | 'rejected';
 

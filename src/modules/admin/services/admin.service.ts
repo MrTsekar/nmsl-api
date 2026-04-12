@@ -271,6 +271,16 @@ export class AdminService {
     });
   }
 
+  /**
+   * Update appointment status - ACCEPT or REJECT an appointment
+   * 
+   * Flow:
+   * - PENDING → CONFIRMED (accept) → Creates audit log "ACCEPTED"
+   * - PENDING → REJECTED (reject) → Creates audit log "REJECTED"
+   * 
+   * Use rescheduleAppointment() for rescheduling instead
+   * Do NOT use this to set CONFIRMED status unless actually accepting the appointment
+   */
   async updateAppointmentStatus(id: string, dto: UpdateAppointmentStatusDto, performedBy?: User): Promise<Appointment> {
     const appt = await this.appointmentsRepository.findOne({ where: { id } });
     if (!appt) throw new NotFoundException('Appointment not found');
@@ -315,6 +325,12 @@ export class AdminService {
     return updated;
   }
 
+  /**
+   * Reschedule an appointment to a new date/time
+   * 
+   * This automatically sets status to RESCHEDULED and creates audit log
+   * Use this instead of updateAppointmentStatus() for rescheduling
+   */
   async rescheduleAppointment(id: string, dto: RescheduleAppointmentAdminDto, performedBy?: User): Promise<Appointment> {
     const appt = await this.appointmentsRepository.findOne({ where: { id } });
     if (!appt) throw new NotFoundException('Appointment not found');

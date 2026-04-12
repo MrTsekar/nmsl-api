@@ -370,7 +370,7 @@ export async function seedDatabase(dataSource: DataSource) {
       doctorName: savedDoctors[1].name,
       appointmentDate: tomorrowStr,
       appointmentTime: '10:00',
-      status: AppointmentStatus.CONFIRMED,
+      status: AppointmentStatus.PENDING,
       reason: 'Cardiac consultation',
       specialty: savedDoctors[1].specialty,
       location: savedDoctors[1].location,
