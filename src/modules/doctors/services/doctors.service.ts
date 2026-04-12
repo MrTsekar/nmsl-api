@@ -283,13 +283,19 @@ export class DoctorsService {
     };
   }
 
-  async getSpecialties() {
-    const specialties = await this.doctorRepository
+  async getSpecialties(location?: string) {
+    const query = this.doctorRepository
       .createQueryBuilder('doctor')
       .select('DISTINCT doctor.specialty', 'specialty')
       .where('doctor.isActive = :isActive', { isActive: true })
-      .andWhere('doctor.specialty IS NOT NULL')
-      .getRawMany();
+      .andWhere('doctor.specialty IS NOT NULL');
+
+    // Filter by location if provided
+    if (location) {
+      query.andWhere('doctor.location = :location', { location });
+    }
+
+    const specialties = await query.getRawMany();
 
     return {
       success: true,

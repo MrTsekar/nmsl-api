@@ -44,9 +44,10 @@ export class DoctorsController {
   }
 
   @Get('specialties')
-  @ApiOperation({ summary: 'Get all medical specialties' })
-  getSpecialties() {
-    return this.doctorsService.getSpecialties();
+  @ApiOperation({ summary: 'Get all medical specialties (optionally filtered by location)' })
+  @ApiQuery({ name: 'location', required: false, example: 'Abuja' })
+  getSpecialties(@Query('location') location?: string) {
+    return this.doctorsService.getSpecialties(location);
   }
 
   @Get('available-slots')
