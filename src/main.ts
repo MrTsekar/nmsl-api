@@ -17,11 +17,14 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api/v1');
 
-  // CORS - Allow all origins for now (production: restrict to specific domains)
-  logger.log(`🌐 CORS enabled for all origins`);
+  // CORS - Whitelist frontend domains
+  const frontendUrls = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const allowedOrigins = frontendUrls.split(',').map(url => url.trim());
+  
+  logger.log(`🌐 Allowed CORS origins: ${JSON.stringify(allowedOrigins)}`);
   
   app.enableCors({
-    origin: true, // Allow all origins
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
