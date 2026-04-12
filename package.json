@@ -16,6 +16,7 @@
     "migration:generate": "npm run build && typeorm migration:generate src/database/migrations/Migration -d dist/database/data-source.js",
     "migration:create": "typeorm migration:create src/database/migrations/Migration",
     "seed": "ts-node -r tsconfig-paths/register src/database/run-seed.ts",
+    "cleanup-seed": "ts-node -r tsconfig-paths/register src/scripts/cleanup-seed-data.ts",
     "create-admin": "ts-node -r tsconfig-paths/register src/scripts/create-admin.ts"
   },
   "jest": {
