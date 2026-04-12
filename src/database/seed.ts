@@ -8,7 +8,6 @@ import { Partner } from '../modules/partners/entities/partner.entity';
 import { ContactInfo } from '../modules/contact/entities/contact-info.entity';
 import { Statistic } from '../modules/statistics/entities/statistic.entity';
 import { Service, ServiceCategory, NigeriaLocation } from '../modules/services/entities/service.entity';
-import { Appointment, AppointmentStatus } from '../modules/appointments/entities/appointment.entity';
 
 export async function seedDatabase(dataSource: DataSource) {
   console.log('🌱 Starting database seeding...');
@@ -335,36 +334,6 @@ export async function seedDatabase(dataSource: DataSource) {
 
   await serviceRepository.save(services);
   console.log('✅ Created services');
-
-  // 9. Create Sample Appointments
-  const appointmentRepository = dataSource.getRepository(Appointment);
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-
-  const appointments = [
-    {
-      patientId: patientEntities[0].id,
-      doctorId: savedDoctors[0].id,
-      patientName: patientEntities[0].name,
-      patientEmail: patientEntities[0].email,
-      patientPhone: patientEntities[0].phone,
-      doctorName: savedDoctors[0].name,
-      appointmentDate: tomorrowStr,
-      appointmentTime: '09:00',
-      status: AppointmentStatus.PENDING,
-      reason: 'Routine check-up',
-      specialty: savedDoctors[0].specialty,
-      location: savedDoctors[0].location,
-      fee: 0,
-      visitType: 'Physical',
-      isUrgent: false,
-      isConflicted: false,
-    },
-  ];
-
-  await appointmentRepository.save(appointments);
-  console.log('✅ Created sample appointments');
 
   console.log('🎉 Database seeding completed successfully!');
 }
