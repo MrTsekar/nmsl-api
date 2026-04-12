@@ -83,95 +83,33 @@ export class AppointmentsService {
   }
 
   async create(dto: CreateAppointmentDto, patient: User): Promise<Appointment> {
-    const doctor = await this.usersService.findById(dto.doctorId);
-    if (!doctor || doctor.role !== UserRole.DOCTOR) {
-      throw new NotFoundException('Doctor not found');
-    }
-    if (!doctor.isActive) {
-      throw new BadRequestException('Doctor is not active');
-    }
-
-    const availability = await this.availabilityRepository.findOne({
-      where: { doctorId: dto.doctorId },
-    });
-
-    if (availability) {
-      const dayOfWeek = new Date(dto.appointmentDate).toLocaleDateString('en-US', {
-        weekday: 'long',
-      });
-      if (!availability.availableDays.includes(dayOfWeek)) {
-        throw new BadRequestException(`Doctor is not available on ${dayOfWeek}`);
-      }
-      if (!availability.timeSlots.includes(dto.appointmentTime)) {
-        throw new BadRequestException('Time slot is not available');
-      }
-      const isBooked = availability.bookedSlots?.some(
-        (s) => s.date === dto.appointmentDate && s.time === dto.appointmentTime,
-      );
-      if (isBooked) throw new BadRequestException('This time slot is already booked');
-
-      const isUnavailable = availability.unavailableSlots?.some(
-        (s) => s.date === dto.appointmentDate && s.time === dto.appointmentTime,
-      );
-      if (isUnavailable) throw new BadRequestException('This time slot is unavailable');
-
-      const currentBooked = availability.bookedSlots || [];
-      availability.bookedSlots = [
-        ...currentBooked,
-        { date: dto.appointmentDate, time: dto.appointmentTime, appointmentId: '' },
-      ];
-    }
-
     // Handle guest bookings vs logged-in users
     const isGuest = dto.isGuest || !patient;
     
     const appointment = this.appointmentsRepository.create({
-      patientId: isGuest ? null : patient.id,
-      doctorId: doctor.id,
+      patientId: isGuest ? null : patient?.id,
+      doctorId: null, // No doctor assigned yet - admin will assign later
       patientName: dto.name || patient?.name || 'Guest',
-      doctorName: doctor.name,
+      doctorName: null, // Will be set when admin assigns doctor
       patientEmail: dto.email || patient?.email,
       patientPhone: dto.phone || patient?.phone,
       appointmentDate: dto.appointmentDate,
       appointmentTime: dto.appointmentTime,
       reason: dto.reason,
       visitType: dto.visitType || 'Physical Visit',
-      specialty: dto.specialty || doctor.specialty || 'General Practice',
-      location: dto.location || doctor.location,
+      specialty: dto.specialty,
+      location: dto.location,
       additionalComment: dto.comment,
       isUrgent: dto.isUrgent || false,
-      fee: doctor.consultationFee || 0,
+      fee: 0, // Will be set when doctor is assigned
       status: AppointmentStatus.PENDING,
       isConflicted: false,
     });
 
     const saved = await this.appointmentsRepository.save(appointment);
 
-    if (availability) {
-      const slots = availability.bookedSlots;
-      const idx = slots.findIndex(
-        (s) => s.date === dto.appointmentDate && s.time === dto.appointmentTime && !s.appointmentId,
-      );
-      if (idx >= 0) {
-        slots[idx].appointmentId = saved.id;
-        availability.bookedSlots = slots;
-        await this.availabilityRepository.save(availability);
-      }
-    }
-
-    // Only create conversation if patient is logged in
-    if (!isGuest && patient) {
-      await this.chatService.createConversation({
-        appointmentId: saved.id,
-        patientId: patient.id,
-        doctorId: doctor.id,
-        patientName: patient.name,
-        doctorName: doctor.name,
-      });
-    }
-
-    // Real-time update via WebSocket
-    this.chatGateway.emitAppointmentUpdate(doctor.id, saved);
+    // No chat conversation created until doctor is assigned
+    // Admin/Appointment Officer will assign doctor and create conversation
 
     return saved;
   }

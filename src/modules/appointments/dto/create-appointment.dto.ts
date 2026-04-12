@@ -18,10 +18,6 @@ enum VisitType {
 }
 
 export class CreateAppointmentDto {
-  @ApiProperty({ example: 'uuid-of-doctor' })
-  @IsUUID()
-  doctorId: string;
-
   @ApiProperty({ example: '2024-02-20' })
   @IsDateString()
   appointmentDate: string;

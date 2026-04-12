@@ -297,126 +297,32 @@ export class DoctorsService {
     };
   }
 
-  async getAvailableSlots(doctorId: string, date: string) {
-    const doctor = await this.doctorRepository.findOne({ where: { id: doctorId } });
-    if (!doctor) {
-      throw new NotFoundException('Doctor not found');
-    }
-
-    const availability = await this.availabilityRepository.findOne({
-      where: { doctorId },
-    });
-
-    if (!availability) {
-      return {
-        success: true,
-        data: [],
-        message: 'No availability configured for this doctor',
-      };
-    }
-
+  async getStandardTimeSlots(date: string) {
     const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
-
-    if (!availability.availableDays.includes(dayOfWeek)) {
+    
+    // Weekend check
+    if (dayOfWeek === 'Saturday' || dayOfWeek === 'Sunday') {
       return {
         success: true,
         data: [],
-        message: `Doctor is not available on ${dayOfWeek}`,
+        message: 'Hospital is closed on weekends',
+        date,
+        dayOfWeek,
       };
     }
 
-    // Get all time slots
-    const allSlots = availability.timeSlots || [];
-
-    // Filter out booked slots
-    const bookedTimes = (availability.bookedSlots || [])
-      .filter(s => s.date === date)
-      .map(s => s.time);
-
-    // Filter out unavailable slots
-    const unavailableTimes = (availability.unavailableSlots || [])
-      .filter(s => s.date === date)
-      .map(s => s.time);
-
-    // Get available slots
-    const availableSlots = allSlots.filter(
-      time => !bookedTimes.includes(time) && !unavailableTimes.includes(time)
-    );
+    // Standard hospital hours: 8 AM - 5 PM (hourly slots)
+    const standardSlots = [
+      '08:00', '09:00', '10:00', '11:00', 
+      '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'
+    ];
 
     return {
       success: true,
-      data: availableSlots,
-      doctorName: doctor.name,
+      data: standardSlots,
       date,
       dayOfWeek,
-    };
-  }
-
-  async searchAvailableSlots(location: string, specialty: string, date: string) {
-    // Find all active doctors matching location + specialty
-    const doctors = await this.doctorRepository.find({
-      where: {
-        location,
-        specialty,
-        isActive: true,
-      },
-    });
-
-    if (doctors.length === 0) {
-      return {
-        success: true,
-        data: [],
-        message: 'No doctors found for this location and specialty',
-      };
-    }
-
-    const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
-    const allAvailableSlots = new Map<string, { doctorId: string; doctorName: string }>();
-
-    // Check each doctor's availability
-    for (const doctor of doctors) {
-      const availability = await this.availabilityRepository.findOne({
-        where: { doctorId: doctor.id },
-      });
-
-      if (!availability) continue;
-      if (!availability.availableDays.includes(dayOfWeek)) continue;
-
-      const allSlots = availability.timeSlots || [];
-      const bookedTimes = (availability.bookedSlots || [])
-        .filter(s => s.date === date)
-        .map(s => s.time);
-      const unavailableTimes = (availability.unavailableSlots || [])
-        .filter(s => s.date === date)
-        .map(s => s.time);
-
-      // Add available slots
-      for (const time of allSlots) {
-        if (!bookedTimes.includes(time) && !unavailableTimes.includes(time)) {
-          // If slot not already added, or this doctor is "better", use this doctor
-          if (!allAvailableSlots.has(time)) {
-            allAvailableSlots.set(time, {
-              doctorId: doctor.id,
-              doctorName: doctor.name,
-            });
-          }
-        }
-      }
-    }
-
-    // Convert to array and sort by time
-    const slots = Array.from(allAvailableSlots.entries())
-      .map(([time, doctor]) => ({ time, ...doctor }))
-      .sort((a, b) => a.time.localeCompare(b.time));
-
-    return {
-      success: true,
-      data: slots,
-      location,
-      specialty,
-      date,
-      dayOfWeek,
-      totalDoctors: doctors.length,
+      message: 'Doctor will be assigned by admin/appointment officer',
     };
   }
 }

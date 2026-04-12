@@ -50,27 +50,10 @@ export class DoctorsController {
   }
 
   @Get('available-slots')
-  @ApiOperation({ summary: 'Get available time slots for a doctor on a specific date' })
-  @ApiQuery({ name: 'doctorId', required: true })
+  @ApiOperation({ summary: 'Get standard time slots for any date (no doctor assignment during booking)' })
   @ApiQuery({ name: 'date', required: true, example: '2026-04-15' })
-  getAvailableSlots(
-    @Query('doctorId') doctorId: string,
-    @Query('date') date: string,
-  ) {
-    return this.doctorsService.getAvailableSlots(doctorId, date);
-  }
-
-  @Get('search-available-slots')
-  @ApiOperation({ summary: 'Find available slots across all doctors by location + specialty + date' })
-  @ApiQuery({ name: 'location', required: true, example: 'Abuja' })
-  @ApiQuery({ name: 'specialty', required: true, example: 'General Medicine' })
-  @ApiQuery({ name: 'date', required: true, example: '2026-04-15' })
-  searchAvailableSlots(
-    @Query('location') location: string,
-    @Query('specialty') specialty: string,
-    @Query('date') date: string,
-  ) {
-    return this.doctorsService.searchAvailableSlots(location, specialty, date);
+  getAvailableSlots(@Query('date') date: string) {
+    return this.doctorsService.getStandardTimeSlots(date);
   }
 
   @Get('availability/:doctorId')
