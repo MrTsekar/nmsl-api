@@ -75,6 +75,28 @@ export class AdminService {
         `Email ${dto.email} is already in use by another user (${existingUser.role}). Please use a different email address.`
       );
     }
+
+    // Check if phone number already exists
+    const existingDoctorPhone = await this.doctorsRepository.findOne({
+      where: { phone: dto.phone },
+    });
+    
+    if (existingDoctorPhone) {
+      throw new BadRequestException(
+        `A doctor with phone number ${dto.phone} already exists. Please use a different phone number.`
+      );
+    }
+
+    // Also check if phone exists in users table
+    const existingUserPhone = await this.usersRepository.findOne({
+      where: { phone: dto.phone },
+    });
+    
+    if (existingUserPhone) {
+      throw new BadRequestException(
+        `Phone number ${dto.phone} is already in use by another user (${existingUserPhone.role}). Please use a different phone number.`
+      );
+    }
     
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     
