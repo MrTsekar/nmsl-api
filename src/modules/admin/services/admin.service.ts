@@ -401,6 +401,22 @@ export class AdminService {
   }
 
   /**
+   * Helper function to check if a time falls within a range
+   */
+  private isTimeInRange(timeToCheck: string, startTime: string, endTime: string): boolean {
+    const toMinutes = (time: string): number => {
+      const [hours, mins] = time.split(':').map(Number);
+      return hours * 60 + mins;
+    };
+
+    const checkMins = toMinutes(timeToCheck);
+    const startMins = toMinutes(startTime);
+    const endMins = toMinutes(endTime);
+
+    return checkMins >= startMins && checkMins <= endMins;
+  }
+
+  /**
    * Get available doctors for an appointment
    * Filters doctors by specialty, location, and checks availability for the requested time
    */
@@ -417,18 +433,19 @@ export class AdminService {
         location,
         isActive: true,
       },
+      relations: ['availabilitySchedule'],
     });
 
-    // Get day of week from date
+    // Get day of week from date - MUST be lowercase for matching
     const dayOfWeek = new Date(date).toLocaleDateString('en-US', {
       weekday: 'long',
-    });
+    }).toLowerCase(); // "wednesday" not "Wednesday"
 
     // Filter by availability
     const availableDoctors: Doctor[] = [];
 
     for (const doctor of doctors) {
-      // Get doctor's availability
+      // Get doctor's availability schedule
       const availability = await this.doctorAvailabilityRepository.findOne({
         where: { doctorId: doctor.id },
       });
@@ -436,11 +453,40 @@ export class AdminService {
       // If no availability record, doctor is not available
       if (!availability) continue;
 
-      // Check if doctor works on this day of week
-      if (!availability.availableDays?.includes(dayOfWeek)) continue;
+      // Check if doctor has availability configured
+      if (!availability.days || availability.days.length === 0) continue;
 
-      // Check if the requested time is in the doctor's time slots
-      if (!availability.timeSlots?.includes(time)) continue;
+      // Check if doctor works on this day of week (case-insensitive match)
+      const dayMatches = availability.days.some(
+        (day) => day.toLowerCase() === dayOfWeek
+      );
+      if (!dayMatches) continue;
+
+      // Check if the requested time falls within working hours
+      let timeIsAvailable = false;
+
+      if (availability.useUniformTime) {
+        // Check uniform time range
+        if (availability.uniformTimeStart && availability.uniformTimeEnd) {
+          timeIsAvailable = this.isTimeInRange(
+            time,
+            availability.uniformTimeStart,
+            availability.uniformTimeEnd,
+          );
+        }
+      } else {
+        // Check custom time for this specific day
+        if (availability.customTimes && availability.customTimes[dayOfWeek]) {
+          const dayTime = availability.customTimes[dayOfWeek];
+          timeIsAvailable = this.isTimeInRange(
+            time,
+            dayTime.start,
+            dayTime.end,
+          );
+        }
+      }
+
+      if (!timeIsAvailable) continue;
 
       // Check if the slot is already booked
       const isBooked = availability.bookedSlots?.some(
@@ -515,22 +561,64 @@ export class AdminService {
       );
     }
 
-    // Check day of week
+    // Check if doctor has availability configured
+    if (!availability.days || availability.days.length === 0) {
+      throw new BadRequestException(
+        'Doctor has no available days configured',
+      );
+    }
+
+    // Check day of week - MUST be lowercase
     const dayOfWeek = new Date(appointmentDate).toLocaleDateString('en-US', {
       weekday: 'long',
-    });
+    }).toLowerCase(); // "wednesday" not "Wednesday"
 
-    if (!availability.availableDays?.includes(dayOfWeek)) {
+    // Check if doctor works on this day (case-insensitive match)
+    const dayMatches = availability.days.some(
+      (day) => day.toLowerCase() === dayOfWeek
+    );
+    if (!dayMatches) {
       throw new BadRequestException(
         `Doctor is not available on ${dayOfWeek}`,
       );
     }
 
-    // Check if the requested time is in the doctor's time slots
-    if (!availability.timeSlots?.includes(appointmentTime)) {
-      throw new BadRequestException(
-        'Doctor does not have this time slot in their schedule',
-      );
+    // Check if the requested time falls within working hours
+    let timeIsAvailable = false;
+
+    if (availability.useUniformTime) {
+      // Check uniform time range
+      if (availability.uniformTimeStart && availability.uniformTimeEnd) {
+        timeIsAvailable = this.isTimeInRange(
+          appointmentTime,
+          availability.uniformTimeStart,
+          availability.uniformTimeEnd,
+        );
+      }
+      if (!timeIsAvailable) {
+        throw new BadRequestException(
+          `Requested time ${appointmentTime} is outside doctor's working hours (${availability.uniformTimeStart}-${availability.uniformTimeEnd})`,
+        );
+      }
+    } else {
+      // Check custom time for this specific day
+      if (availability.customTimes && availability.customTimes[dayOfWeek]) {
+        const dayTime = availability.customTimes[dayOfWeek];
+        timeIsAvailable = this.isTimeInRange(
+          appointmentTime,
+          dayTime.start,
+          dayTime.end,
+        );
+        if (!timeIsAvailable) {
+          throw new BadRequestException(
+            `Requested time ${appointmentTime} is outside doctor's working hours for ${dayOfWeek} (${dayTime.start}-${dayTime.end})`,
+          );
+        }
+      } else {
+        throw new BadRequestException(
+          `Doctor does not have working hours configured for ${dayOfWeek}`,
+        );
+      }
     }
 
     // Check if the slot is already booked
