@@ -16,11 +16,15 @@ import {
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { AppointmentsService } from '../services/appointments.service';
 import { AppointmentLockService } from '../services/appointment-lock.service';
+import { AppointmentAvailabilityService } from '../services/appointment-availability.service';
 import { CreateAppointmentDto } from '../dto/create-appointment.dto';
 import { UpdateAppointmentDto } from '../dto/update-appointment.dto';
 import { RescheduleAppointmentDto } from '../dto/reschedule-appointment.dto';
 import { LockAppointmentDto } from '../dto/lock-appointment.dto';
 import { UnlockAppointmentDto } from '../dto/unlock-appointment.dto';
+import { GetAvailableSlotsDto } from '../dto/get-available-slots.dto';
+import { CheckDateAvailabilityDto } from '../dto/check-date-availability.dto';
+import { GetAvailableDatesDto } from '../dto/get-available-dates.dto';
 import { AppointmentStatus } from '../entities/appointment.entity';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
@@ -35,7 +39,80 @@ export class AppointmentsController {
   constructor(
     private readonly appointmentsService: AppointmentsService,
     private readonly appointmentLockService: AppointmentLockService,
+    private readonly availabilityService: AppointmentAvailabilityService,
   ) {}
+
+  // ============================================
+  // AVAILABILITY ENDPOINTS (Public)
+  // ============================================
+
+  @Get('availability/slots')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get available time slots for a specific date',
+    description:
+      'Returns available time slots for appointment booking based on date, location, and specialty. Returns empty array if no slots available.',
+  })
+  async getAvailableSlots(@Query() query: GetAvailableSlotsDto) {
+    const slots = await this.availabilityService.getAvailableSlots(
+      query.date,
+      query.location,
+      query.specialty,
+    );
+
+    return {
+      success: true,
+      data: slots,
+      message: 'Available slots retrieved successfully',
+    };
+  }
+
+  @Get('availability/date')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Check if a specific date has available slots',
+    description:
+      'Quick boolean check for date availability with slot count.',
+  })
+  async checkDateAvailability(@Query() query: CheckDateAvailabilityDto) {
+    const result = await this.availabilityService.checkDateAvailability(
+      query.date,
+      query.location,
+      query.specialty,
+    );
+
+    return {
+      success: true,
+      data: result,
+      message: 'Date availability checked',
+    };
+  }
+
+  @Get('availability/dates')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get available dates within a date range',
+    description:
+      'Returns list of dates that have available slots. Useful for calendar views. Limited to 90-day ranges.',
+  })
+  async getAvailableDates(@Query() query: GetAvailableDatesDto) {
+    const dates = await this.availabilityService.getAvailableDates(
+      query.startDate,
+      query.endDate,
+      query.location,
+      query.specialty,
+    );
+
+    return {
+      success: true,
+      data: dates,
+      message: 'Available dates retrieved successfully',
+    };
+  }
+
+  // ============================================
+  // APPOINTMENT MANAGEMENT
+  // ============================================
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
