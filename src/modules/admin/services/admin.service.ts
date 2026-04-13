@@ -39,11 +39,16 @@ export class AdminService {
 
   // ─── KPIs ────────────────────────────────────────────────────────────────
   async getKpis() {
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+
     const [totalUsers, totalDoctors, totalAppointments, pendingApprovals] =
       await Promise.all([
         this.usersRepository.count(),
         this.doctorsRepository.count(),
-        this.appointmentsRepository.count(),
+        this.appointmentsRepository.count({
+          where: { appointmentDate: today },
+        }),
         this.appointmentsRepository.count({
           where: { status: AppointmentStatus.PENDING },
         }),
