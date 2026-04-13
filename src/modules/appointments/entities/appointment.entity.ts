@@ -7,6 +7,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  AfterLoad,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Doctor } from '../../doctors/entities/doctor.entity';
@@ -132,12 +133,12 @@ export class Appointment {
   @JoinColumn({ name: 'doctorId' })
   doctor: Doctor;
 
-  // Virtual property for API compatibility - maps 'reason' to 'reasonForVisit'
-  get reasonForVisit(): string {
-    return this.reason;
-  }
+  // Virtual property for API compatibility - populated from 'reason' field
+  reasonForVisit?: string;
 
-  set reasonForVisit(value: string) {
-    this.reason = value;
+  @AfterLoad()
+  setComputedFields() {
+    // Map 'reason' to 'reasonForVisit' for frontend compatibility
+    this.reasonForVisit = this.reason;
   }
 }
