@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   HttpException,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -28,6 +29,7 @@ import { UpdateUserEmailDto } from '../dto/update-user-email.dto';
 import { UpdateAppointmentStatusDto, RescheduleAppointmentAdminDto } from '../dto/update-appointment.dto';
 import { UpdateAvailabilityDto } from '../../doctors/dto/update-availability.dto';
 import { LockAppointmentDto } from '../../appointments/dto/lock-appointment.dto';
+import { AssignDoctorDto } from '../dto/assign-doctor.dto';
 import { UnlockAppointmentDto } from '../../appointments/dto/unlock-appointment.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
@@ -286,6 +288,54 @@ export class AdminController {
       ...appointment,
       lockInfo: null,
     };
+  }
+
+  @Get('appointments/:id/available-doctors')
+  @Roles(UserRole.ADMIN, UserRole.APPOINTMENT_OFFICER)
+  @ApiOperation({
+    summary: 'Get available doctors for an appointment',
+    description:
+      'Returns doctors who match the appointment specialty/location and are available at the requested date/time',
+  })
+  @ApiQuery({ name: 'date', required: true, description: 'Appointment date (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'time', required: true, description: 'Appointment time (HH:mm)' })
+  async getAvailableDoctors(
+    @Param('id') id: string,
+    @Query('date') date: string,
+    @Query('time') time: string,
+  ) {
+    const appointment = await this.appointmentsService.findById(id);
+    if (!appointment) {
+      throw new NotFoundException('Appointment not found');
+    }
+
+    return this.adminService.getAvailableDoctorsForAppointment(
+      appointment.specialty,
+      appointment.location,
+      date,
+      time,
+    );
+  }
+
+  @Patch('appointments/:id/assign-doctor')
+  @Roles(UserRole.ADMIN, UserRole.APPOINTMENT_OFFICER)
+  @ApiOperation({
+    summary: 'Assign a doctor to an appointment',
+    description:
+      'Assigns a doctor to a pending appointment and sets the appointment date/time',
+  })
+  async assignDoctor(
+    @Param('id') id: string,
+    @Body() dto: AssignDoctorDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.adminService.assignDoctorToAppointment(
+      id,
+      dto.doctorId,
+      dto.appointmentDate,
+      dto.appointmentTime,
+      user,
+    );
   }
 }
 

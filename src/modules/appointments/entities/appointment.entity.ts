@@ -131,4 +131,13 @@ export class Appointment {
   @ManyToOne(() => Doctor, { eager: false, nullable: true })
   @JoinColumn({ name: 'doctorId' })
   doctor: Doctor;
+
+  // Virtual property for API compatibility - maps 'reason' to 'reasonForVisit'
+  get reasonForVisit(): string {
+    return this.reason;
+  }
+
+  set reasonForVisit(value: string) {
+    this.reason = value;
+  }
 }

@@ -399,5 +399,206 @@ export class AdminService {
 
     return updated;
   }
+
+  /**
+   * Get available doctors for an appointment
+   * Filters doctors by specialty, location, and checks availability for the requested time
+   */
+  async getAvailableDoctorsForAppointment(
+    specialty: string,
+    location: string,
+    date: string,
+    time: string,
+  ): Promise<Doctor[]> {
+    // Get all doctors matching specialty and location who are active
+    const doctors = await this.doctorsRepository.find({
+      where: {
+        specialty,
+        location,
+        isActive: true,
+      },
+    });
+
+    // Get day of week from date
+    const dayOfWeek = new Date(date).toLocaleDateString('en-US', {
+      weekday: 'long',
+    });
+
+    // Filter by availability
+    const availableDoctors: Doctor[] = [];
+
+    for (const doctor of doctors) {
+      // Get doctor's availability
+      const availability = await this.doctorAvailabilityRepository.findOne({
+        where: { doctorId: doctor.id },
+      });
+
+      // If no availability record, doctor is not available
+      if (!availability) continue;
+
+      // Check if doctor works on this day of week
+      if (!availability.availableDays?.includes(dayOfWeek)) continue;
+
+      // Check if the requested time is in the doctor's time slots
+      if (!availability.timeSlots?.includes(time)) continue;
+
+      // Check if the slot is already booked
+      const isBooked = availability.bookedSlots?.some(
+        (s) => s.date === date && s.time === time,
+      );
+      if (isBooked) continue;
+
+      // Check if the slot is marked unavailable
+      const isUnavailable = availability.unavailableSlots?.some(
+        (s) => s.date === date && s.time === time,
+      );
+      if (isUnavailable) continue;
+
+      // Doctor is available!
+      availableDoctors.push(doctor);
+    }
+
+    return availableDoctors;
+  }
+
+  /**
+   * Assign a doctor to an appointment
+   * Updates the appointment with doctor info, date, and time
+   */
+  async assignDoctorToAppointment(
+    appointmentId: string,
+    doctorId: string,
+    appointmentDate: string,
+    appointmentTime: string,
+    performedBy?: User,
+  ): Promise<Appointment> {
+    const appointment = await this.appointmentsRepository.findOne({
+      where: { id: appointmentId },
+    });
+    if (!appointment) {
+      throw new NotFoundException('Appointment not found');
+    }
+
+    const doctor = await this.doctorsRepository.findOne({
+      where: { id: doctorId },
+    });
+    if (!doctor) {
+      throw new NotFoundException('Doctor not found');
+    }
+
+    // Verify doctor is active
+    if (!doctor.isActive) {
+      throw new BadRequestException('Doctor is not active');
+    }
+
+    // Verify doctor matches appointment specialty and location
+    if (doctor.specialty !== appointment.specialty) {
+      throw new BadRequestException(
+        `Doctor specialty (${doctor.specialty}) does not match appointment specialty (${appointment.specialty})`,
+      );
+    }
+
+    if (doctor.location !== appointment.location) {
+      throw new BadRequestException(
+        `Doctor location (${doctor.location}) does not match appointment location (${appointment.location})`,
+      );
+    }
+
+    // Check if doctor is available at the requested time
+    const availability = await this.doctorAvailabilityRepository.findOne({
+      where: { doctorId: doctor.id },
+    });
+
+    if (!availability) {
+      throw new BadRequestException(
+        'Doctor does not have availability schedule configured',
+      );
+    }
+
+    // Check day of week
+    const dayOfWeek = new Date(appointmentDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+    });
+
+    if (!availability.availableDays?.includes(dayOfWeek)) {
+      throw new BadRequestException(
+        `Doctor is not available on ${dayOfWeek}`,
+      );
+    }
+
+    // Check if the requested time is in the doctor's time slots
+    if (!availability.timeSlots?.includes(appointmentTime)) {
+      throw new BadRequestException(
+        'Doctor does not have this time slot in their schedule',
+      );
+    }
+
+    // Check if the slot is already booked
+    const isBooked = availability.bookedSlots?.some(
+      (s) => s.date === appointmentDate && s.time === appointmentTime,
+    );
+    if (isBooked) {
+      throw new BadRequestException(
+        'Doctor already has a booked appointment at this time',
+      );
+    }
+
+    // Check if the slot is marked unavailable
+    const isUnavailable = availability.unavailableSlots?.some(
+      (s) => s.date === appointmentDate && s.time === appointmentTime,
+    );
+    if (isUnavailable) {
+      throw new BadRequestException(
+        'Doctor is unavailable at the requested time',
+      );
+    }
+
+    // Check for conflicting appointments
+    const conflictingAppointment = await this.appointmentsRepository.findOne({
+      where: {
+        doctorId: doctor.id,
+        appointmentDate,
+        appointmentTime,
+        status: AppointmentStatus.CONFIRMED,
+      },
+    });
+
+    if (conflictingAppointment) {
+      throw new BadRequestException(
+        'Doctor already has a confirmed appointment at this time',
+      );
+    }
+
+    // Assign doctor to appointment
+    appointment.doctorId = doctor.id;
+    appointment.doctorName = doctor.name;
+    appointment.appointmentDate = appointmentDate;
+    appointment.appointmentTime = appointmentTime;
+    appointment.fee = 0; // Set default fee or calculate based on specialty
+
+    const updated = await this.appointmentsRepository.save(appointment);
+
+    // Add slot to booked slots
+    const currentBooked = availability.bookedSlots || [];
+    availability.bookedSlots = [
+      ...currentBooked,
+      { date: appointmentDate, time: appointmentTime, appointmentId: updated.id },
+    ];
+    await this.doctorAvailabilityRepository.save(availability);
+
+    // Create audit log for doctor assignment
+    if (performedBy) {
+      await this.auditService.createAuditLog({
+        appointmentId: updated.id,
+        patientName: updated.patientName,
+        action: 'DOCTOR_ASSIGNED' as AuditAction,
+        performedBy: performedBy.email,
+        performedByName: performedBy.name,
+        details: `Assigned to Dr. ${doctor.name} on ${appointmentDate} at ${appointmentTime}`,
+      });
+    }
+
+    return updated;
+  }
 }
 
