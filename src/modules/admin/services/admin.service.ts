@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In, Not } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User, UserRole } from '../../users/entities/user.entity';
 import { Doctor } from '../../doctors/entities/doctor.entity';
@@ -441,6 +441,27 @@ export class AdminService {
       relations: ['availabilitySchedule'],
     });
 
+    // CRITICAL: Find doctors who already have appointments at this date/time
+    // to prevent double-booking
+    const existingAppointments = await this.appointmentsRepository.find({
+      where: {
+        appointmentDate: date,
+        appointmentTime: time,
+        status: In([
+          AppointmentStatus.CONFIRMED,
+          AppointmentStatus.PENDING,
+          AppointmentStatus.SCHEDULED,
+          AppointmentStatus.RESCHEDULED,
+        ]),
+      },
+      select: ['doctorId'],
+    });
+
+    // Extract IDs of doctors who are already booked
+    const bookedDoctorIds = existingAppointments
+      .map((apt) => apt.doctorId)
+      .filter((id) => id !== null && id !== undefined);
+
     // Get day of week from date - MUST be lowercase for matching
     const dayOfWeek = new Date(date).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -450,6 +471,14 @@ export class AdminService {
     const availableDoctors: Doctor[] = [];
 
     for (const doctor of doctors) {
+      // PREVENT DOUBLE-BOOKING: Skip doctors who already have appointments at this time
+      if (bookedDoctorIds.includes(doctor.id)) {
+        this.logger.debug(
+          `Doctor ${doctor.name} (${doctor.id}) already has an appointment at ${date} ${time}`,
+        );
+        continue;
+      }
+
       // Get doctor's availability schedule
       const availability = await this.doctorAvailabilityRepository.findOne({
         where: { doctorId: doctor.id },
@@ -493,7 +522,7 @@ export class AdminService {
 
       if (!timeIsAvailable) continue;
 
-      // Check if the slot is already booked
+      // Check if the slot is already booked (legacy check - kept for backwards compatibility)
       const isBooked = availability.bookedSlots?.some(
         (s) => s.date === date && s.time === time,
       );
@@ -646,19 +675,26 @@ export class AdminService {
       );
     }
 
-    // Check for conflicting appointments
+    // Check for conflicting appointments - PREVENT DOUBLE-BOOKING
+    // Must exclude the current appointment being assigned
     const conflictingAppointment = await this.appointmentsRepository.findOne({
       where: {
         doctorId: doctor.id,
         appointmentDate,
         appointmentTime,
-        status: AppointmentStatus.CONFIRMED,
+        status: In([
+          AppointmentStatus.CONFIRMED,
+          AppointmentStatus.PENDING,
+          AppointmentStatus.SCHEDULED,
+          AppointmentStatus.RESCHEDULED,
+        ]),
       },
     });
 
-    if (conflictingAppointment) {
+    // Exclude the current appointment being assigned from conflict check
+    if (conflictingAppointment && conflictingAppointment.id !== appointmentId) {
       throw new BadRequestException(
-        'Doctor already has a confirmed appointment at this time',
+        `Doctor already has a ${conflictingAppointment.status} appointment at this time`,
       );
     }
 
