@@ -569,11 +569,12 @@ export class AdminService {
       );
     }
 
-    // Assign doctor to appointment
+    // Assign doctor to appointment and accept it
     appointment.doctorId = doctor.id;
     appointment.doctorName = doctor.name;
     appointment.appointmentDate = appointmentDate;
     appointment.appointmentTime = appointmentTime;
+    appointment.status = AppointmentStatus.CONFIRMED; // Automatically accept when doctor is assigned
     appointment.fee = 0; // Set default fee or calculate based on specialty
 
     const updated = await this.appointmentsRepository.save(appointment);
@@ -586,16 +587,25 @@ export class AdminService {
     ];
     await this.doctorAvailabilityRepository.save(availability);
 
-    // Create audit log for doctor assignment
+    // Create audit log for acceptance (assigning doctor = accepting appointment)
     if (performedBy) {
       await this.auditService.createAuditLog({
         appointmentId: updated.id,
         patientName: updated.patientName,
-        action: 'DOCTOR_ASSIGNED' as AuditAction,
+        action: AuditAction.ACCEPTED,
         performedBy: performedBy.email,
         performedByName: performedBy.name,
         details: `Assigned to Dr. ${doctor.name} on ${appointmentDate} at ${appointmentTime}`,
       });
+    }
+
+    // Send acceptance emails to patient and doctor
+    try {
+      await this.emailService.sendAppointmentAcceptedToPatient(updated);
+      await this.emailService.sendAppointmentAcceptedToDoctor(updated, doctor.email);
+    } catch (emailError) {
+      this.logger.warn(`Failed to send acceptance emails: ${emailError}`);
+      // Don't fail the request if email fails
     }
 
     return updated;
