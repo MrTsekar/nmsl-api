@@ -1,0 +1,158 @@
+========================================
+URGENT: NEW DOCTOR ASSIGNMENT API READY
+========================================
+
+Backend has deployed 2 new endpoints to fix doctor assignment. Integrate ASAP.
+
+----------------------------------------
+ENDPOINT 1: GET AVAILABLE DOCTORS
+----------------------------------------
+GET /admin/appointments/:appointmentId/available-doctors?date=2026-04-22&time=17:00
+
+Headers:
+- Authorization: Bearer {token}
+
+Query Params:
+- date (required): YYYY-MM-DD
+- time (required): HH:mm (24-hour)
+
+Returns: Array of available doctors matching appointment specialty/location
+
+Response Example:
+[
+  {
+    "id": "doctor-uuid-123",
+    "name": "Dr. Elijah Tsekar",
+    "email": "elijah@nmsl.app",
+    "specialty": "Psychiatry",
+    "location": "Abuja"
+  }
+]
+
+----------------------------------------
+ENDPOINT 2: ASSIGN DOCTOR
+----------------------------------------
+PATCH /admin/appointments/:appointmentId/assign-doctor
+
+Headers:
+- Authorization: Bearer {token}
+- Content-Type: application/json
+
+Request Body:
+{
+  "doctorId": "doctor-uuid-123",
+  "appointmentDate": "2026-04-22",
+  "appointmentTime": "17:00"
+}
+
+Response: Updated appointment object with status "confirmed"
+
+⚠️ IMPORTANT: Assigning doctor AUTOMATICALLY confirms appointment and sends emails!
+
+----------------------------------------
+FRONTEND FLOW
+----------------------------------------
+1. Admin clicks "Accept" on pending appointment
+2. Show modal with:
+   - Date picker
+   - Time picker  
+   - Doctor dropdown (initially empty)
+
+3. When date/time selected:
+   - Call GET /admin/appointments/:id/available-doctors?date=YYYY-MM-DD&time=HH:mm
+   - Populate doctor dropdown with results
+   - If empty array, show "No doctors available, try different time"
+
+4. Admin selects doctor from dropdown
+
+5. Admin clicks "Assign Doctor" button:
+   - Call PATCH /admin/appointments/:id/assign-doctor
+   - Body: { doctorId, appointmentDate, appointmentTime }
+   - Success: Close modal, refresh list, show success toast
+   - Error: Display error.message from API
+
+----------------------------------------
+REACT CODE EXAMPLE
+----------------------------------------
+
+// Fetch available doctors
+const fetchAvailableDoctors = async (appointmentId, date, time) => {
+  const response = await fetch(
+    `/admin/appointments/${appointmentId}/available-doctors?date=${date}&time=${time}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }
+  );
+  
+  if (!response.ok) throw new Error('Failed to fetch doctors');
+  return response.json();
+};
+
+// Assign doctor
+const assignDoctor = async (appointmentId, doctorId, date, time) => {
+  const response = await fetch(
+    `/admin/appointments/${appointmentId}/assign-doctor`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        doctorId,
+        appointmentDate: date,
+        appointmentTime: time,
+      }),
+    }
+  );
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to assign doctor');
+  }
+  
+  return response.json();
+};
+
+// Usage
+const handleAssignDoctor = async () => {
+  try {
+    setLoading(true);
+    const updatedAppointment = await assignDoctor(
+      appointmentId,
+      selectedDoctorId,
+      selectedDate,
+      selectedTime
+    );
+    
+    toast.success('Doctor assigned successfully!');
+    onClose();
+    refreshAppointments();
+  } catch (error) {
+    toast.error(error.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
+----------------------------------------
+BUG FIXES INCLUDED
+----------------------------------------
+✅ "reasonForVisit" now in API responses
+✅ "Invalid Date" fixed - date/time saved when doctor assigned  
+✅ "No doctors available" fixed - availability matching works
+✅ Appointments today KPI fixed - counts only today's appointments
+✅ Auto-confirmation and email sending
+
+----------------------------------------
+DEPLOYMENT STATUS
+----------------------------------------
+✅ Deployed to Production (Azure)
+✅ Build Passing
+✅ Ready to use NOW
+
+Full docs: See DOCTOR_ASSIGNMENT_API.md in repo
+
+Questions? Contact backend team.
