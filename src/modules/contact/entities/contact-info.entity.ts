@@ -10,31 +10,31 @@ export class ContactInfo {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ nullable: true })
   phone: string;
 
-  @Column()
+  @Column({ nullable: true })
   emailPrimary: string;
 
   @Column({ nullable: true })
   emailSecondary: string;
 
-  @Column()
+  @Column({ nullable: true })
   addressLine1: string;
 
-  @Column()
+  @Column({ nullable: true })
   addressLine2: string;
 
-  @Column()
+  @Column({ nullable: true })
   city: string;
 
-  @Column()
+  @Column({ nullable: true })
   country: string;
 
-  @Column()
+  @Column({ nullable: true })
   officeHours: string;
 
-  @Column()
+  @Column({ nullable: true })
   emergencyHours: string;
 
   @UpdateDateColumn()
