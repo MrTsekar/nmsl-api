@@ -1,4 +1,4 @@
-import { Module, Controller, Get } from '@nestjs/common';
+import { Module, Controller, Get, Logger } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -53,32 +53,59 @@ export class AppController {
 
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        host: config.get<string>('DATABASE_HOST', 'localhost'),
-        port: config.get<number>('DATABASE_PORT', 5432),
-        username: config.get<string>('DATABASE_USER', 'postgres'),
-        password: config.get<string>('DATABASE_PASSWORD', ''),
-        database: config.get<string>('DATABASE_NAME', 'nmsl_healthcare'),
-        entities: [
-          User,
-          Doctor,
-          Appointment,
-          DoctorAvailability,
-          Service,
-          Statistic,
-          Partner,
-          BoardMember,
-          ContactInfo,
-          AuditLog,
-          Testimonial,
-        ],
-        synchronize: config.get<string>('DATABASE_SYNC') === 'true',
-        logging: config.get<string>('NODE_ENV') !== 'production',
-        ssl: config.get<string>('DATABASE_SSL') === 'true'
-          ? { rejectUnauthorized: false }
-          : false,
-      }),
+      useFactory: (config: ConfigService) => {
+        const logger = new Logger('DatabaseConfig');
+        const dbConfig = {
+          type: 'postgres' as const,
+          host: config.get<string>('DATABASE_HOST', 'localhost'),
+          port: config.get<number>('DATABASE_PORT', 5432),
+          username: config.get<string>('DATABASE_USER', 'postgres'),
+          password: config.get<string>('DATABASE_PASSWORD', ''),
+          database: config.get<string>('DATABASE_NAME', 'nmsl_healthcare'),
+          entities: [
+            User,
+            Doctor,
+            Appointment,
+            DoctorAvailability,
+            Service,
+            Statistic,
+            Partner,
+            BoardMember,
+            ContactInfo,
+            AuditLog,
+            Testimonial,
+          ],
+          synchronize: config.get<string>('DATABASE_SYNC') === 'true',
+          logging: config.get<string>('NODE_ENV') !== 'production',
+          ssl: config.get<string>('DATABASE_SSL') === 'true'
+            ? { rejectUnauthorized: false }
+            : false,
+          connectTimeoutMS: 10000, // Reduced from 30s to 10s
+          retryAttempts: 10,
+          retryDelay: 3000,
+          autoLoadEntities: false,
+          extra: {
+            connectionTimeoutMillis: 10000,
+            max: 20, // connection pool size
+            idleTimeoutMillis: 30000,
+          },
+        };
+
+        // Log connection details (mask password)
+        logger.log('📊 Database Connection Config:');
+        logger.log(`  Host: ${dbConfig.host}`);
+        logger.log(`  Port: ${dbConfig.port}`);
+        logger.log(`  Database: ${dbConfig.database}`);
+        logger.log(`  Username: ${dbConfig.username}`);
+        logger.log(`  Password: ${dbConfig.password ? '***' + dbConfig.password.slice(-2) : 'NOT SET'}`);
+        logger.log(`  SSL: ${dbConfig.ssl ? 'ENABLED (rejectUnauthorized: false)' : 'DISABLED'}`);
+        logger.log(`  Synchronize: ${dbConfig.synchronize}`);
+        logger.log(`  Retry Attempts: ${dbConfig.retryAttempts}`);
+        logger.log(`  Retry Delay: ${dbConfig.retryDelay}ms`);
+        logger.log(`  Connection Timeout: ${dbConfig.connectTimeoutMS}ms`);
+
+        return dbConfig;
+      },
     }),
 
     ThrottlerModule.forRootAsync({
