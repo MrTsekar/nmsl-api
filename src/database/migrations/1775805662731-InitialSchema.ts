@@ -4,6 +4,13 @@ export class InitialSchema1775805662731 implements MigrationInterface {
     name = 'InitialSchema1775805662731'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
+        // Try to enable UUID extension (may fail on Azure, that's OK if gen_random_uuid is available)
+        try {
+            await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+        } catch (error) {
+            console.log('⚠️  uuid-ossp extension not available, using gen_random_uuid() instead');
+        }
+        
         await queryRunner.query(`
             CREATE TYPE "public"."users_role_enum" AS ENUM(
                 'patient',
