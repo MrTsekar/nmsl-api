@@ -8,6 +8,7 @@ import {
   Body,
   UseGuards,
   Query,
+  Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { BoardMembersService } from '../services/board-members.service';
@@ -22,6 +23,7 @@ import { FileUploadService } from '../../file-upload/services/file-upload.servic
 @ApiTags('Board Members')
 @Controller()
 export class BoardMembersController {
+  private readonly logger = new Logger(BoardMembersController.name);
   constructor(
     private readonly boardMembersService: BoardMembersService,
     private readonly fileUploadService: FileUploadService,
@@ -64,6 +66,7 @@ export class BoardMembersController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a board member' })
   create(@Body() dto: CreateBoardMemberDto) {
+    this.logger.log(`[CREATE] Incoming payload: ${JSON.stringify(dto)}`);
     return this.boardMembersService.create(dto);
   }
 
@@ -73,6 +76,7 @@ export class BoardMembersController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update a board member' })
   update(@Param('id') id: string, @Body() dto: UpdateBoardMemberDto) {
+    this.logger.log(`[UPDATE ${id}] Incoming payload: ${JSON.stringify(dto)}`);
     return this.boardMembersService.update(id, dto);
   }
 
