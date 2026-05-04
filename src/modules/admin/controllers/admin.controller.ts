@@ -183,9 +183,9 @@ export class AdminController {
   // ─── Appointments ─────────────────────────────────────────────────────────
   @Get('appointments')
   @Roles(UserRole.ADMIN, UserRole.APPOINTMENT_OFFICER)
-  @ApiOperation({ summary: 'Get all appointments (admin view)' })
-  getAppointments() {
-    return this.adminService.getAppointments();
+  @ApiOperation({ summary: 'Get all appointments (admin view, scoped by location for officers)' })
+  getAppointments(@CurrentUser() user: User) {
+    return this.adminService.getAppointments(user);
   }
 
   @Patch('appointments/:id/status')
@@ -224,6 +224,19 @@ export class AdminController {
     @CurrentUser() user: User,
   ) {
     const isAdmin = user.role === UserRole.ADMIN;
+
+    // Officers can only lock appointments in their own location
+    if (!isAdmin) {
+      const target = await this.appointmentsService.findById(id);
+      if (!target) throw new NotFoundException('Appointment not found');
+      if (!user.location || target.location !== user.location) {
+        throw new HttpException(
+          `You can only manage appointments in ${user.location || 'your assigned location'}.`,
+          HttpStatus.FORBIDDEN,
+        );
+      }
+    }
+
     const lockInfo = await this.appointmentLockService.acquireLock(
       id,
       dto.officerEmail || user.email,
@@ -303,10 +316,21 @@ export class AdminController {
     @Param('id') id: string,
     @Query('date') date: string,
     @Query('time') time: string,
+    @CurrentUser() user: User,
   ) {
     const appointment = await this.appointmentsService.findById(id);
     if (!appointment) {
       throw new NotFoundException('Appointment not found');
+    }
+
+    if (
+      user.role === UserRole.APPOINTMENT_OFFICER &&
+      (!user.location || appointment.location !== user.location)
+    ) {
+      throw new HttpException(
+        `You can only manage appointments in ${user.location || 'your assigned location'}.`,
+        HttpStatus.FORBIDDEN,
+      );
     }
 
     return this.adminService.getAvailableDoctorsForAppointment(

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Not } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -314,8 +314,39 @@ export class AdminService {
   }
 
   // ─── Appointments ─────────────────────────────────────────────────────────
-  async getAppointments(): Promise<Appointment[]> {
+
+  /**
+   * Returns true when the user is an appointment officer (not a full admin).
+   * Officers are scoped to a single location.
+   */
+  private isLocationScoped(user?: User): boolean {
+    return !!user && user.role === UserRole.APPOINTMENT_OFFICER;
+  }
+
+  /**
+   * Throws ForbiddenException if a location-scoped officer attempts to act on
+   * an appointment outside of their assigned location. Admins are unrestricted.
+   */
+  private assertLocationAccess(appointment: Appointment, user?: User): void {
+    if (!this.isLocationScoped(user)) return;
+    if (!user!.location) {
+      throw new ForbiddenException(
+        'Your account has no location assigned. Contact an administrator.',
+      );
+    }
+    if (appointment.location !== user!.location) {
+      throw new ForbiddenException(
+        `You can only manage appointments in ${user!.location}.`,
+      );
+    }
+  }
+
+  async getAppointments(user?: User): Promise<Appointment[]> {
+    const where = this.isLocationScoped(user) && user!.location
+      ? { location: user!.location }
+      : {};
     return this.appointmentsRepository.find({
+      where,
       order: { appointmentDate: 'DESC' },
     });
   }
@@ -333,6 +364,7 @@ export class AdminService {
   async updateAppointmentStatus(id: string, dto: UpdateAppointmentStatusDto, performedBy?: User): Promise<Appointment> {
     const appt = await this.appointmentsRepository.findOne({ where: { id } });
     if (!appt) throw new NotFoundException('Appointment not found');
+    this.assertLocationAccess(appt, performedBy);
     
     const oldStatus = appt.status;
     appt.status = dto.status as AppointmentStatus;
@@ -383,6 +415,7 @@ export class AdminService {
   async rescheduleAppointment(id: string, dto: RescheduleAppointmentAdminDto, performedBy?: User): Promise<Appointment> {
     const appt = await this.appointmentsRepository.findOne({ where: { id } });
     if (!appt) throw new NotFoundException('Appointment not found');
+    this.assertLocationAccess(appt, performedBy);
     
     appt.appointmentDate = dto.date;
     appt.appointmentTime = dto.time;
@@ -558,6 +591,7 @@ export class AdminService {
     if (!appointment) {
       throw new NotFoundException('Appointment not found');
     }
+    this.assertLocationAccess(appointment, performedBy);
 
     const doctor = await this.doctorsRepository.findOne({
       where: { id: doctorId },
